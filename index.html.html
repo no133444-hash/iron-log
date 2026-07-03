@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" class="[scrollbar-gutter:stable]" style="background:#16171B">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#16171B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>鐵量日誌 IRON LOG</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#16171B; --card:#21232A; --card2:#2A2D36; --line:#33363F;
+    --ink:#ECEAE4; --muted:#9A9DA8; --accent:#F2A93B; --accent-dim:#8a6120;
+  }
+  html{ background:var(--bg); }
+  body{ font-family:'Noto Sans TC',sans-serif; background:var(--bg); color:var(--ink);
+        -webkit-tap-highlight-color:transparent; }
+  .num{ font-family:'Archivo','Noto Sans TC',sans-serif; font-variant-numeric:tabular-nums; }
+  .display{ font-family:'Archivo','Noto Sans TC',sans-serif; }
+  .tab-panel{ display:none; }
+  .tab-panel.active{ display:block; }
+  .nav-btn{ color:var(--muted); transition:color .15s; }
+  .nav-btn.active{ color:var(--accent); }
+  .nav-btn.active .nav-bar{ opacity:1; }
+  .nav-bar{ opacity:0; transition:opacity .15s; }
+  .ex-btn{ background:var(--card); border:1px solid var(--line); color:var(--ink); }
+  .ex-btn.active{ background:var(--accent); border-color:var(--accent); color:#16171B; font-weight:700; }
+  input,select,textarea{ background:var(--card2); border:1px solid var(--line); color:var(--ink);
+    border-radius:.75rem; outline:none; }
+  input:focus,select:focus{ border-color:var(--accent); }
+  input[type="date"]{ color-scheme:dark; }
+  summary{ list-style:none; }
+  summary::-webkit-details-marker{ display:none; }
+  summary::marker{ content:""; }
+  .stepper{ background:var(--card2); border:1px solid var(--line); user-select:none;
+    -webkit-user-select:none; touch-action:manipulation; }
+  .stepper:active{ background:var(--line); }
+  .plate{ display:inline-flex; align-items:center; justify-content:center;
+    border-radius:9999px; font-family:'Archivo',sans-serif; font-weight:700;
+    border:2px solid rgba(255,255,255,.15); }
+  .fadein{ animation:fi .25s ease; }
+  @keyframes fi{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
+  @media (prefers-reduced-motion:reduce){ .fadein{ animation:none; } }
+  ::-webkit-scrollbar{ width:0; height:0; }
+</style>
+</head>
+<body class="min-h-screen">
+<div class="max-w-md mx-auto px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-28">
+
+  <!-- Header -->
+  <header class="flex items-end justify-between mb-4">
+    <div>
+      <div class="display text-[10px] tracking-[0.35em] font-bold" style="color:var(--accent)">IRON LOG</div>
+      <h1 class="display text-2xl font-black tracking-wide">鐵量日誌</h1>
+    </div>
+    <div class="text-right">
+      <div class="text-[10px]" style="color:var(--muted)">今日</div>
+      <div id="hdrDate" class="num text-sm font-bold"></div>
+    </div>
+  </header>
+
+  <!-- ============ Tab: 記錄 ============ -->
+  <div id="tab-log" class="tab-panel active">
+
+    <div class="rounded-2xl p-4 mb-4" style="background:var(--card);border:1px solid var(--line)">
+      <label class="text-xs font-medium" style="color:var(--muted)">訓練日期</label>
+      <input id="logDate" type="date" class="w-full mt-1 px-3 py-3 text-base num font-bold">
+
+      <div class="mt-4">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-medium" style="color:var(--muted)">訓練動作</label>
+          <button id="goManageEx" class="text-xs font-medium" style="color:var(--accent)">管理動作 ›</button>
+        </div>
+        <div id="exPicker" class="flex flex-wrap gap-2 mt-2"></div>
+      </div>
+
+      <!-- 重量 -->
+      <div class="mt-5">
+        <label class="text-xs font-medium" style="color:var(--muted)">重量 (kg)</label>
+        <div class="flex items-stretch gap-2 mt-1">
+          <button class="stepper rounded-xl w-14 text-xl font-bold num" data-step="w" data-delta="-2.5">−</button>
+          <input id="inWeight" type="text" inputmode="decimal" class="flex-1 text-center num text-3xl font-black py-2" value="60">
+          <button class="stepper rounded-xl w-14 text-xl font-bold num" data-step="w" data-delta="2.5">＋</button>
+        </div>
+        <div class="flex gap-1.5 mt-2">
+          <button class="stepper rounded-lg px-2.5 py-1 text-xs num" data-step="w" data-delta="-10">−10</button>
+          <button class="stepper rounded-lg px-2.5 py-1 text-xs num" data-step="w" data-delta="-5">−5</button>
+          <div class="flex-1"></div>
+          <button class="stepper rounded-lg px-2.5 py-1 text-xs num" data-step="w" data-delta="5">＋5</button>
+          <button class="stepper rounded-lg px-2.5 py-1 text-xs num" data-step="w" data-delta="10">＋10</button>
+        </div>
+      </div>
+
+      <!-- 槓片配置（招牌功能） -->
+      <details class="mt-3">
+        <summary class="flex items-center justify-between py-2 cursor-pointer">
+          <span class="text-xs font-medium" style="color:var(--muted)">🏋️ 槓片配置（單邊，槓 20kg）</span>
+          <span class="text-xs" style="color:var(--muted)">▾</span>
+        </summary>
+        <div id="plateCalc" class="flex flex-wrap items-center gap-1.5 py-2"></div>
+      </details>
+
+      <!-- 次數 / 組數 -->
+      <div class="grid grid-cols-2 gap-3 mt-4">
+        <div>
+          <label class="text-xs font-medium" style="color:var(--muted)">次數 / 組</label>
+          <div class="flex items-stretch gap-1.5 mt-1">
+            <button class="stepper rounded-xl w-11 text-lg font-bold num" data-step="r" data-delta="-1">−</button>
+            <input id="inReps" type="text" inputmode="numeric" class="flex-1 min-w-0 text-center num text-xl font-black py-2" value="8">
+            <button class="stepper rounded-xl w-11 text-lg font-bold num" data-step="r" data-delta="1">＋</button>
+          </div>
+        </div>
+        <div>
+          <label class="text-xs font-medium" style="color:var(--muted)">組數</label>
+          <div class="flex items-stretch gap-1.5 mt-1">
+            <button class="stepper rounded-xl w-11 text-lg font-bold num" data-step="s" data-delta="-1">−</button>
+            <input id="inSets" type="text" inputmode="numeric" class="flex-1 min-w-0 text-center num text-xl font-black py-2" value="3">
+            <button class="stepper rounded-xl w-11 text-lg font-bold num" data-step="s" data-delta="1">＋</button>
+          </div>
+        </div>
+      </div>
+
+      <input id="inNote" type="text" class="w-full mt-4 px-3 py-2.5 text-sm" placeholder="備註（選填，例如：RPE 8、有補手）">
+
+      <button id="btnAdd" class="w-full mt-4 py-3.5 rounded-xl display font-black text-lg tracking-widest"
+        style="background:var(--accent);color:#16171B">＋ 記錄這一筆</button>
+    </div>
+
+    <!-- 當日已記錄 -->
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="display font-bold text-sm tracking-wider" id="todayListTitle">當日紀錄</h2>
+      <div class="text-xs num" style="color:var(--muted)" id="todayVolume"></div>
+    </div>
+    <div id="todayList" class="space-y-2"></div>
+  </div>
+
+  <!-- ============ Tab: 歷史 ============ -->
+  <div id="tab-history" class="tab-panel">
+    <h2 class="display font-bold text-sm tracking-wider mb-3">訓練歷史</h2>
+    <div id="historyList" class="space-y-2"></div>
+  </div>
+
+  <!-- ============ Tab: 統計 ============ -->
+  <div id="tab-stats" class="tab-panel">
+    <h2 class="display font-bold text-sm tracking-wider mb-3">近 8 週訓練量 (kg)</h2>
+    <div class="rounded-2xl p-4 mb-5" style="background:var(--card);border:1px solid var(--line)">
+      <div id="weeklyChart"></div>
+    </div>
+    <h2 class="display font-bold text-sm tracking-wider mb-3">各動作最佳紀錄</h2>
+    <div id="prList" class="space-y-2"></div>
+  </div>
+
+  <!-- ============ Tab: 管理 ============ -->
+  <div id="tab-manage" class="tab-panel">
+    <h2 class="display font-bold text-sm tracking-wider mb-3">動作管理</h2>
+    <div class="flex gap-2 mb-3">
+      <input id="newExName" type="text" class="flex-1 px-3 py-2.5 text-sm" placeholder="新增動作名稱，例如：保加利亞分腿蹲">
+      <button id="btnAddEx" class="px-4 rounded-xl font-bold" style="background:var(--accent);color:#16171B">新增</button>
+    </div>
+    <div id="exManageList" class="space-y-2 mb-8"></div>
+
+    <h2 class="display font-bold text-sm tracking-wider mb-3">資料備份</h2>
+    <div class="rounded-2xl p-4 space-y-3" style="background:var(--card);border:1px solid var(--line)">
+      <p class="text-xs leading-relaxed" style="color:var(--muted)">資料儲存在此瀏覽器的 LocalStorage。換手機或清除瀏覽資料前，請先匯出備份。</p>
+      <div class="flex gap-2">
+        <button id="btnExport" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--card2);border:1px solid var(--line)">⬇ 匯出 JSON</button>
+        <label class="flex-1 py-2.5 rounded-xl text-sm font-bold text-center cursor-pointer" style="background:var(--card2);border:1px solid var(--line)">
+          ⬆ 匯入 JSON<input id="importFile" type="file" accept=".json" class="hidden">
+        </label>
+      </div>
+      <button id="btnWipe" class="w-full py-2.5 rounded-xl text-sm font-bold" style="background:#3a2426;border:1px solid #6b3237;color:#f2a0a5">清除全部資料</button>
+    </div>
+  </div>
+</div>
+
+<!-- 底部導覽列 -->
+<nav class="fixed bottom-0 left-0 right-0 z-30" style="background:rgba(22,23,27,.92);backdrop-filter:blur(12px);border-top:1px solid var(--line)">
+  <div class="max-w-md mx-auto grid grid-cols-4 pb-[env(safe-area-inset-bottom)]">
+    <button class="nav-btn active py-2.5 flex flex-col items-center gap-0.5" data-tab="log">
+      <span class="text-xl leading-none">✏️</span><span class="text-[10px] font-medium">記錄</span>
+      <span class="nav-bar h-0.5 w-6 rounded-full" style="background:var(--accent)"></span>
+    </button>
+    <button class="nav-btn py-2.5 flex flex-col items-center gap-0.5" data-tab="history">
+      <span class="text-xl leading-none">📅</span><span class="text-[10px] font-medium">歷史</span>
+      <span class="nav-bar h-0.5 w-6 rounded-full" style="background:var(--accent)"></span>
+    </button>
+    <button class="nav-btn py-2.5 flex flex-col items-center gap-0.5" data-tab="stats">
+      <span class="text-xl leading-none">📈</span><span class="text-[10px] font-medium">統計</span>
+      <span class="nav-bar h-0.5 w-6 rounded-full" style="background:var(--accent)"></span>
+    </button>
+    <button class="nav-btn py-2.5 flex flex-col items-center gap-0.5" data-tab="manage">
+      <span class="text-xl leading-none">⚙️</span><span class="text-[10px] font-medium">管理</span>
+      <span class="nav-bar h-0.5 w-6 rounded-full" style="background:var(--accent)"></span>
+    </button>
+  </div>
+</nav>
+
+<script>
+"use strict";
+const STORAGE_KEY = "ironLogData_v1";
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function escHtml(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function fmtDate(iso){
+  const [y,m,d] = iso.split("-");
+  const wd = "日一二三四五六"[new Date(iso+"T00:00:00").getDay()];
+  return `${y}/${m}/${d}（${wd}）`;
+}
+
+function getDefaultState(){
+  const mk = n => ({ id: uid(), name: n });
+  return {
+    exercises: ["深蹲","臥推","硬舉","肩推","槓鈴划船","引體向上"].map(mk),
+    logs: [] // {id, date:"YYYY-MM-DD", exId, weight, reps, sets, note}
+  };
+}
+function loadData(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(raw){ try{ const s = JSON.parse(raw); if(s && s.exercises && s.logs) return s; }catch(e){} }
+  return getDefaultState();
+}
+function saveData(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+let state = loadData();
+let selectedExId = state.exercises.length ? state.exercises[0].id : null;
+
+/* ---------- 通用 ---------- */
+function exName(id){ const e = state.exercises.find(x=>x.id===id); return e ? e.name : "（已刪除動作）"; }
+function volumeOf(l){ return (l.weight||0)*(l.reps||0)*(l.sets||0); }
+function afterDataChange(){
+  saveData();
+  renderTodayList();
+  renderHistory();
+  renderStats();
+  renderExManage();
+  renderExPicker();
+}
+
+/* ---------- 槓片計算 ---------- */
+const PLATES = [
+  {w:25,  c:"#D0342C", t:"#fff"},
+  {w:20,  c:"#2D5FAB", t:"#fff"},
+  {w:15,  c:"#E8B62C", t:"#16171B"},
+  {w:10,  c:"#3A9A57", t:"#fff"},
+  {w:5,   c:"#E9E9E9", t:"#16171B"},
+  {w:2.5, c:"#1c1c1c", t:"#ddd"},
+  {w:1.25,c:"#9CA3AF", t:"#16171B"}
+];
+function renderPlateCalc(){
+  const box = document.getElementById("plateCalc");
+  const total = parseFloat(document.getElementById("inWeight").value) || 0;
+  const BAR = 20;
+  if(total < BAR){
+    box.innerHTML = `<span class="text-xs" style="color:var(--muted)">重量低於空槓 ${BAR}kg（或使用啞鈴／機械式）</span>`;
+    return;
+  }
+  let side = (total - BAR) / 2;
+  const used = [];
+  PLATES.forEach(p=>{ while(side >= p.w - 1e-9){ used.push(p); side -= p.w; } });
+  let html = `<span class="text-xs num mr-1" style="color:var(--muted)">槓20</span>`;
+  html += used.map(p=>{
+    const size = 30 + Math.round(p.w*0.9);
+    return `<span class="plate" style="width:${size}px;height:${size}px;background:${p.c};color:${p.t};font-size:${p.w>=10?11:9}px">${p.w}</span>`;
+  }).join("");
+  if(side > 0.01) html += `<span class="text-xs num ml-1" style="color:#f2a0a5">餘 ${side.toFixed(2)}kg 無法配片</span>`;
+  if(!used.length) html += `<span class="text-xs" style="color:var(--muted)">空槓</span>`;
+  box.innerHTML = html;
+}
+
+/* ---------- 動作選擇列 ---------- */
+function renderExPicker(){
+  const wrap = document.getElementById("exPicker");
+  if(!state.exercises.length){
+    wrap.innerHTML = `<span class="text-xs" style="color:var(--muted)">尚無動作，請先到「管理」新增</span>`;
+    selectedExId = null;
+    return;
+  }
+  if(!state.exercises.find(e=>e.id===selectedExId)) selectedExId = state.exercises[0].id;
+  wrap.innerHTML = state.exercises.map(e=>
+    `<button class="ex-btn ${e.id===selectedExId?"active":""} text-sm px-3.5 py-2 rounded-xl" data-expick="${e.id}">${escHtml(e.name)}</button>`
+  ).join("");
+  wrap.querySelectorAll("[data-expick]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{ selectedExId = btn.dataset.expick; renderExPicker(); });
+  });
+}
+
+/* ---------- 當日紀錄 ---------- */
+function renderTodayList(){
+  const date = document.getElementById("logDate").value || todayStr();
+  document.getElementById("todayListTitle").textContent = fmtDate(date) + " 紀錄";
+  const logs = state.logs.filter(l=>l.date===date);
+  const vol = logs.reduce((a,l)=>a+volumeOf(l),0);
+  document.getElementById("todayVolume").textContent = logs.length ? `總量 ${vol.toLocaleString()} kg` : "";
+  const box = document.getElementById("todayList");
+  if(!logs.length){
+    box.innerHTML = `<div class="rounded-2xl p-6 text-center text-sm" style="background:var(--card);border:1px dashed var(--line);color:var(--muted)">這一天還沒有紀錄，加一筆吧 💪</div>`;
+    return;
+  }
+  box.innerHTML = logs.map(l=>`
+    <div class="fadein rounded-2xl p-3.5 flex items-center gap-3" style="background:var(--card);border:1px solid var(--line)">
+      <div class="flex-1 min-w-0">
+        <div class="font-bold text-sm">${escHtml(exName(l.exId))}</div>
+        <div class="num text-lg font-black" style="color:var(--accent)">${l.weight}<span class="text-xs font-bold" style="color:var(--muted)"> kg × </span>${l.reps}<span class="text-xs font-bold" style="color:var(--muted)"> 次 × </span>${l.sets}<span class="text-xs font-bold" style="color:var(--muted)"> 組</span></div>
+        ${l.note?`<div class="text-xs mt-0.5 truncate" style="color:var(--muted)">${escHtml(l.note)}</div>`:""}
+      </div>
+      <div class="text-right shrink-0">
+        <div class="num text-xs" style="color:var(--muted)">${volumeOf(l).toLocaleString()} kg</div>
+        <button class="text-xs mt-1 px-2 py-1 rounded-lg" style="color:#f2a0a5;background:var(--card2)" data-del="${l.id}">刪除</button>
+      </div>
+    </div>`).join("");
+  box.querySelectorAll("[data-del]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      state.logs = state.logs.filter(x=>x.id!==btn.dataset.del);
+      afterDataChange();
+    });
+  });
+}
+
+/* ---------- 歷史 ---------- */
+function renderHistory(){
+  const box = document.getElementById("historyList");
+  if(!state.logs.length){
+    box.innerHTML = `<div class="rounded-2xl p-6 text-center text-sm" style="background:var(--card);border:1px dashed var(--line);color:var(--muted)">尚無任何訓練紀錄</div>`;
+    return;
+  }
+  const byDate = {};
+  state.logs.forEach(l=>{ (byDate[l.date] = byDate[l.date] || []).push(l); });
+  const dates = Object.keys(byDate).sort().reverse();
+  box.innerHTML = dates.map((d,i)=>{
+    const logs = byDate[d];
+    const vol = logs.reduce((a,l)=>a+volumeOf(l),0);
+    const exSet = [...new Set(logs.map(l=>exName(l.exId)))];
+    return `
+    <details class="rounded-2xl overflow-hidden" style="background:var(--card);border:1px solid var(--line)" ${i===0?"open":""}>
+      <summary class="flex items-center justify-between p-3.5 cursor-pointer">
+        <div>
+          <div class="num font-bold text-sm">${fmtDate(d)}</div>
+          <div class="text-xs mt-0.5 truncate max-w-[200px]" style="color:var(--muted)">${escHtml(exSet.join("、"))}</div>
+        </div>
+        <div class="text-right shrink-0">
+          <div class="num font-black" style="color:var(--accent)">${vol.toLocaleString()}</div>
+          <div class="text-[10px]" style="color:var(--muted)">kg 總量・${logs.length} 筆</div>
+        </div>
+      </summary>
+      <div class="px-3.5 pb-3.5 space-y-1.5" style="border-top:1px solid var(--line)">
+        ${logs.map(l=>`
+          <div class="flex items-center justify-between pt-2 text-sm">
+            <span class="font-medium">${escHtml(exName(l.exId))}${l.note?`<span class="text-xs ml-1" style="color:var(--muted)">${escHtml(l.note)}</span>`:""}</span>
+            <span class="num font-bold">${l.weight}kg × ${l.reps} × ${l.sets}</span>
+          </div>`).join("")}
+      </div>
+    </details>`;
+  }).join("");
+}
+
+/* ---------- 統計 ---------- */
+function epley1RM(w,r){ return r<=1 ? w : w*(1+r/30); }
+
+function renderStats(){
+  // 近8週訓練量長條圖（週一為一週開始）
+  const chart = document.getElementById("weeklyChart");
+  const now = new Date(); now.setHours(0,0,0,0);
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((now.getDay()+6)%7));
+  const weeks = [];
+  for(let i=7;i>=0;i--){
+    const start = new Date(monday); start.setDate(monday.getDate()-i*7);
+    const end = new Date(start); end.setDate(start.getDate()+6);
+    const s = start.toISOString().slice(0,10), e = end.toISOString().slice(0,10);
+    const vol = state.logs.filter(l=>l.date>=s && l.date<=e).reduce((a,l)=>a+volumeOf(l),0);
+    weeks.push({ label:(start.getMonth()+1)+"/"+start.getDate(), vol });
+  }
+  const max = Math.max(...weeks.map(w=>w.vol), 1);
+  const W=320, H=150, pad=4, bw=W/8;
+  let bars = "";
+  weeks.forEach((w,idx)=>{
+    const h = Math.round((w.vol/max)*(H-30));
+    const x = idx*bw+pad, y = H-20-h;
+    bars += `<rect x="${x}" y="${y}" width="${bw-pad*2}" height="${Math.max(h,2)}" rx="4" fill="${idx===7?"#F2A93B":"#4A4E5A"}"/>`;
+    if(w.vol>0) bars += `<text x="${x+(bw-pad*2)/2}" y="${y-5}" text-anchor="middle" font-size="8.5" fill="#9A9DA8" font-family="Archivo">${w.vol>=1000?(w.vol/1000).toFixed(1)+"k":w.vol}</text>`;
+    bars += `<text x="${x+(bw-pad*2)/2}" y="${H-6}" text-anchor="middle" font-size="8.5" fill="#9A9DA8" font-family="Archivo">${w.label}</text>`;
+  });
+  chart.innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="w-full">${bars}</svg>`;
+
+  // 各動作 PR
+  const box = document.getElementById("prList");
+  const rows = state.exercises.map(e=>{
+    const logs = state.logs.filter(l=>l.exId===e.id);
+    if(!logs.length) return null;
+    const maxW = logs.reduce((a,l)=>Math.max(a,l.weight),0);
+    const best = logs.reduce((a,l)=> epley1RM(l.weight,l.reps) > epley1RM(a.weight,a.reps) ? l : a, logs[0]);
+    const last = logs.slice().sort((a,b)=>a.date<b.date?1:-1)[0];
+    return { name:e.name, maxW, e1rm:epley1RM(best.weight,best.reps), n:logs.length, lastDate:last.date };
+  }).filter(Boolean).sort((a,b)=>b.maxW-a.maxW);
+  if(!rows.length){
+    box.innerHTML = `<div class="rounded-2xl p-6 text-center text-sm" style="background:var(--card);border:1px dashed var(--line);color:var(--muted)">累積紀錄後這裡會顯示各動作最佳表現</div>`;
+    return;
+  }
+  box.innerHTML = rows.map(r=>`
+    <div class="rounded-2xl p-3.5 flex items-center justify-between" style="background:var(--card);border:1px solid var(--line)">
+      <div>
+        <div class="font-bold text-sm">${escHtml(r.name)}</div>
+        <div class="text-xs mt-0.5" style="color:var(--muted)">${r.n} 筆紀錄・最近 ${r.lastDate.replaceAll("-","/")}</div>
+      </div>
+      <div class="text-right">
+        <div class="num text-xl font-black" style="color:var(--accent)">${r.maxW}<span class="text-xs" style="color:var(--muted)"> kg 最重</span></div>
+        <div class="num text-xs" style="color:var(--muted)">估計 1RM ≈ ${r.e1rm.toFixed(1)} kg</div>
+      </div>
+    </div>`).join("");
+}
+
+/* ---------- 動作管理 ---------- */
+function renderExManage(){
+  const box = document.getElementById("exManageList");
+  if(!state.exercises.length){
+    box.innerHTML = `<div class="rounded-2xl p-5 text-center text-sm" style="background:var(--card);border:1px dashed var(--line);color:var(--muted)">尚無動作</div>`;
+    return;
+  }
+  box.innerHTML = state.exercises.map(e=>{
+    const n = state.logs.filter(l=>l.exId===e.id).length;
+    return `
+    <div class="rounded-2xl p-3 flex items-center gap-2" style="background:var(--card);border:1px solid var(--line)">
+      <div class="flex-1 min-w-0">
+        <div class="font-bold text-sm truncate">${escHtml(e.name)}</div>
+        <div class="text-[11px]" style="color:var(--muted)">${n} 筆紀錄</div>
+      </div>
+      <button class="text-xs px-2.5 py-1.5 rounded-lg" style="background:var(--card2);border:1px solid var(--line)" data-rename="${e.id}">改名</button>
+      <button class="text-xs px-2.5 py-1.5 rounded-lg" style="color:#f2a0a5;background:var(--card2)" data-delex="${e.id}">刪除</button>
+    </div>`;
+  }).join("");
+  box.querySelectorAll("[data-rename]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const e = state.exercises.find(x=>x.id===btn.dataset.rename);
+      const name = prompt("動作新名稱：", e.name);
+      if(name && name.trim()){ e.name = name.trim(); afterDataChange(); }
+    });
+  });
+  box.querySelectorAll("[data-delex]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const id = btn.dataset.delex;
+      const n = state.logs.filter(l=>l.exId===id).length;
+      const msg = n ? `此動作有 ${n} 筆紀錄，刪除動作將一併刪除這些紀錄。確定刪除？` : "確定刪除此動作？";
+      if(!confirm(msg)) return;
+      state.exercises = state.exercises.filter(x=>x.id!==id);
+      state.logs = state.logs.filter(l=>l.exId!==id);
+      afterDataChange();
+    });
+  });
+}
+
+/* ---------- 新增紀錄 ---------- */
+document.getElementById("btnAdd").addEventListener("click", ()=>{
+  if(!selectedExId){ alert("請先選擇（或到管理新增）訓練動作"); return; }
+  const weight = parseFloat(document.getElementById("inWeight").value);
+  const reps = parseInt(document.getElementById("inReps").value,10);
+  const sets = parseInt(document.getElementById("inSets").value,10);
+  const date = document.getElementById("logDate").value || todayStr();
+  if(!(weight>=0) || !(reps>0) || !(sets>0)){ alert("請確認重量、次數、組數為有效數字"); return; }
+  state.logs.push({
+    id: uid(), date, exId: selectedExId,
+    weight, reps, sets,
+    note: document.getElementById("inNote").value.trim()
+  });
+  document.getElementById("inNote").value = "";
+  afterDataChange();
+  const btn = document.getElementById("btnAdd");
+  btn.textContent = "✓ 已記錄";
+  setTimeout(()=>{ btn.textContent = "＋ 記錄這一筆"; }, 900);
+});
+
+/* ---------- 步進按鈕 ---------- */
+document.querySelectorAll("[data-step]").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    const map = { w:"inWeight", r:"inReps", s:"inSets" };
+    const el = document.getElementById(map[btn.dataset.step]);
+    const delta = parseFloat(btn.dataset.delta);
+    let v = parseFloat(el.value) || 0;
+    v = Math.max(0, Math.round((v+delta)*100)/100);
+    el.value = (btn.dataset.step==="w") ? v : Math.round(v);
+    if(btn.dataset.step==="w") renderPlateCalc();
+  });
+});
+document.getElementById("inWeight").addEventListener("input", renderPlateCalc);
+document.getElementById("logDate").addEventListener("change", renderTodayList);
+
+/* ---------- 管理：新增動作 ---------- */
+document.getElementById("btnAddEx").addEventListener("click", ()=>{
+  const el = document.getElementById("newExName");
+  const name = el.value.trim();
+  if(!name) return;
+  if(state.exercises.some(e=>e.name===name)){ alert("已有同名動作"); return; }
+  state.exercises.push({ id: uid(), name });
+  el.value = "";
+  afterDataChange();
+});
+
+/* ---------- 備份 ---------- */
+document.getElementById("btnExport").addEventListener("click", ()=>{
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "iron-log-backup-"+todayStr()+".json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+document.getElementById("importFile").addEventListener("change", e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = evt=>{
+    try{
+      const data = JSON.parse(evt.target.result);
+      if(!data.exercises || !data.logs) throw new Error("格式不符");
+      if(!confirm(`匯入將取代現有資料（動作 ${data.exercises.length} 個、紀錄 ${data.logs.length} 筆）。確定？`)) return;
+      state = data;
+      selectedExId = state.exercises.length ? state.exercises[0].id : null;
+      afterDataChange();
+      alert("匯入完成 ✓");
+    }catch(err){ alert("匯入失敗：檔案格式不正確"); }
+    e.target.value = "";
+  };
+  reader.readAsText(file);
+});
+document.getElementById("btnWipe").addEventListener("click", ()=>{
+  if(!confirm("確定清除全部資料？此動作無法復原（建議先匯出備份）。")) return;
+  state = getDefaultState();
+  selectedExId = state.exercises[0].id;
+  afterDataChange();
+});
+
+/* ---------- Tab 切換 ---------- */
+function switchTab(tab){
+  const panel = document.getElementById("tab-"+tab);
+  if(!panel) return;
+  if(tab==="log"){ renderExPicker(); renderTodayList(); renderPlateCalc(); }
+  if(tab==="history") renderHistory();
+  if(tab==="stats") renderStats();
+  if(tab==="manage") renderExManage();
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.toggle("active", b.dataset.tab===tab));
+  document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
+  panel.classList.add("active");
+  window.scrollTo({top:0,left:0,behavior:"instant"});
+}
+document.querySelectorAll(".nav-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=> switchTab(btn.dataset.tab));
+});
+document.getElementById("goManageEx").addEventListener("click", ()=> switchTab("manage"));
+
+/* ---------- 初始化 ---------- */
+document.getElementById("logDate").value = todayStr();
+document.getElementById("hdrDate").textContent = fmtDate(todayStr());
+renderExPicker();
+renderTodayList();
+renderPlateCalc();
+</script>
+</body>
+</html>
