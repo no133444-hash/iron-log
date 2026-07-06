@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" class="[scrollbar-gutter:stable]" style="background:#F2F4F1">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#F2F4F1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>鐵量日誌 IRON LOG</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;900&family=Work+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F2F4F1; --card:#FFFFFF; --card2:#EAEDE8; --line:#DCE2DB;
+    --ink:#262B28; --muted:#737F76; --accent:#4F7A6E; --accent-soft:#E3ECE8;
+    --gold:#B8935B; --gold-soft:#F3EADA; --danger:#B5695F; --danger-soft:#F5E9E7;
+  }
+  html{ background:var(--bg); }
+  body{
+    font-family:'Work Sans','Noto Sans TC',sans-serif; background:var(--bg); color:var(--ink);
+    -webkit-tap-highlight-color:transparent;
+    background-image:
+      radial-gradient(ellipse 600px 300px at 50% -5%, rgba(79,122,110,.06), transparent 60%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/></svg>");
+  }
+  .num{ font-family:'Big Shoulders Display','Work Sans','Noto Sans TC',sans-serif; font-variant-numeric:tabular-nums; }
+  .display{ font-family:'Big Shoulders Display','Noto Sans TC',sans-serif; letter-spacing:.01em; }
+  .tab-panel{ display:none; }
+  .tab-panel.active{ display:block; }
+  .nav-btn{ color:var(--muted); transition:color .15s; }
+  .nav-btn.active{ color:var(--accent); }
+  .nav-btn.active .nav-bar{ opacity:1; }
+  .nav-bar{ opacity:0; transition:opacity .15s; }
+  .ex-btn{ background:var(--card); border:1px solid var(--line); color:var(--ink); }
+  .ex-btn.active{ background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700; }
+  input,select,textarea{ background:var(--card2); border:1px solid var(--line); color:var(--ink);
+    border-radius:.75rem; outline:none; }
+  input:focus,select:focus{ border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  input[type="date"]{ color-scheme:light; }
+  summary{ list-style:none; }
+  summary::-webkit-details-marker{ display:none; }
+  summary::marker{ content:""; }
+  .chev{ display:inline-block; transition:transform .15s ease; color:var(--muted); }
+  details[open] > summary .chev{ transform:rotate(180deg); }
+  .stepper{ background:var(--card2); border:1px solid var(--line); color:var(--ink); user-select:none;
+    -webkit-user-select:none; touch-action:manipulation; }
+  .stepper:active{ background:var(--line); }
+  .plate{ display:inline-flex; align-items:center; justify-content:center;
+    border-radius:9999px; font-family:'Big Shoulders Display',sans-serif; font-weight:700;
+    border:2px solid rgba(38,43,40,.08); }
+  .cat-icon{ color:var(--accent); }
+  .fadein{ animation:fi .25s ease; }
+  @keyframes fi{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
+  @media (prefers-reduced-motion:reduce){ .fadein{ animation:none; } .chev{ transition:none; } }
+  ::-webkit-scrollbar{ width:0; height:0; }
+</style>
+</head>
+<body class="min-h-screen">
+<div class="max-w-md mx-auto px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-28">
+
+  <!-- Header -->
+  <header class="flex items-end justify-between mb-4">
+    <div>
+      <div class="display text-[10px] tracking-[0.35em] font-bold" style="color:var(--accent)">IRON LOG</div>
+      <h1 class="display text-2xl font-black tracking-wide">鐵量日誌</h1>
+    </div>
+    <div class="text-right">
+      <div class="text-[10px]" style="color:var(--muted)">今日</div>
+      <div id="hdrDate" class="num text-sm font-bold"></div>
+    </div>
+  </header>
+
+  <!-- ============ Tab: 記錄 ============ -->
+  <div id="tab-log" class="tab-panel active">
+
+    <div class="rounded-2xl p-4 mb-4" style="background:var(--card);border:1px solid var(--line)">
+      <label class="text-xs font-medium" style="color:var(--muted)">訓練日期</label>
+      <input id="logDate" type="date" class="w-full mt-1 px-3 py-3 text-base num font-bold">
+
+      <div class="mt-4">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-medium" style="color:var(--muted)">訓練動作</label>
+          <button id="goManageEx" class="text-xs font-medium" style="color:var(--accent)">管理動作 ›</button>
+        </div>
+        <div id="selectedExDisplay" class="text-sm font-bold mt-1.5 mb-2"></div>
+        <div id="exPicker" class="space-y-2"></div>
+      </div>
+
+      <!-- 重量 -->
+      <div class="mt-5">
+        <label class="text-xs font-medium" style="color:var(--muted)">重量 (kg)</label>
+        <div class="flex items-stretch gap-2 mt-1">
+          <button class="stepper rounded-xl w-14 text-xl font-bold num" data-step="w" data-delta="-2.5">−</button>
+          <input id="inWeight" type="text" inputmode="decimal" class="flex-1 text-center num text-3xl font-black py-2" value="60">
+          <button class="stepper rounded-xl w-14 text-xl font-bold num" data-step="w" data-delta="2.5">＋</button>
+        </div>
+        <div class="flex flex-wrap gap-1.5 mt-2">
+          <button class="stepper rounded-lg px-2.5 py-1 text-xs num" data-step="w" data-delta="-10">−10</button>
+          <button class="stepper rounded-lg px-2.5 py-1 text-xs num" data-step="w" data-delta="-5">−5</button>
+          <button class="stepper rounded-lg px-2.5 py-1 text-xs num" data-step="w" data-delta="-2.5">−2.5</button>
+          <button class="stepper rounded-lg px-2.5 py-1 text-xs num" data-step="w" data-delta="2.5">＋2.5</button>
+          <button class="stepper rounded-lg px-2.5 py-1 text-xs num" data-step="w" data-delta="5">＋5</button>
+          <button class="stepper rounded-lg px-2.5 py-1 text-xs num" data-step="w" data-delta="10">＋10</button>
+        </div>
+      </div>
+
+      <!-- 槓片配置（招牌功能） -->
+      <details class="mt-3">
+        <summary class="flex items-center justify-between py-2 cursor-pointer">
+          <span class="text-xs font-medium" style="color:var(--muted)">🏋 槓片配置（單邊，槓 20kg）</span>
+          <span class="chev text-xs">▾</span>
+        </summary>
+        <div id="plateCalc" class="flex flex-wrap items-center gap-1.5 py-2"></div>
+      </details>
+
+      <!-- 次數 / 組數 -->
+      <div class="grid grid-cols-2 gap-3 mt-4">
+        <div>
+          <label class="text-xs font-medium" style="color:var(--muted)">次數 / 組</label>
+          <div class="flex items-stretch gap-1.5 mt-1">
+            <button class="stepper rounded-xl w-11 text-lg font-bold num" data-step="r" data-delta="-1">−</button>
+            <input id="inReps" type="text" inputmode="numeric" class="flex-1 min-w-0 text-center num text-xl font-black py-2" value="8">
+            <button class="stepper rounded-xl w-11 text-lg font-bold num" data-step="r" data-delta="1">＋</button>
+          </div>
+        </div>
+        <div>
+          <label class="text-xs font-medium" style="color:var(--muted)">組數</label>
+          <div class="flex items-stretch gap-1.5 mt-1">
+            <button class="stepper rounded-xl w-11 text-lg font-bold num" data-step="s" data-delta="-1">−</button>
+            <input id="inSets" type="text" inputmode="numeric" class="flex-1 min-w-0 text-center num text-xl font-black py-2" value="3">
+            <button class="stepper rounded-xl w-11 text-lg font-bold num" data-step="s" data-delta="1">＋</button>
+          </div>
+        </div>
+      </div>
+
+      <input id="inNote" type="text" class="w-full mt-4 px-3 py-2.5 text-sm" placeholder="備註（選填，例如：RPE 8、有補手）">
+
+      <button id="btnAdd" class="w-full mt-4 py-3.5 rounded-xl display font-black text-lg tracking-widest"
+        style="background:var(--accent);color:#fff">＋ 記錄這一筆</button>
+    </div>
+
+    <!-- 當日已記錄 -->
+    <h2 class="display font-bold text-sm tracking-wider mb-2">訓練紀錄</h2>
+    <div id="todayList" class="space-y-2"></div>
+  </div>
+
+  <!-- ============ Tab: 歷史 ============ -->
+  <div id="tab-history" class="tab-panel">
+    <h2 class="display font-bold text-sm tracking-wider mb-3">訓練歷史</h2>
+    <div id="historyList" class="space-y-2"></div>
+  </div>
+
+  <!-- ============ Tab: 統計 ============ -->
+  <div id="tab-stats" class="tab-panel">
+    <h2 class="display font-bold text-sm tracking-wider mb-3">近 8 週訓練量 (kg)</h2>
+    <div class="rounded-2xl p-4 mb-5" style="background:var(--card);border:1px solid var(--line)">
+      <div id="weeklyChart"></div>
+    </div>
+    <h2 class="display font-bold text-sm tracking-wider mb-3">各動作最佳紀錄</h2>
+    <div id="prList" class="space-y-2"></div>
+  </div>
+
+  <!-- ============ Tab: 管理 ============ -->
+  <div id="tab-manage" class="tab-panel">
+    <h2 class="display font-bold text-sm tracking-wider mb-3">新增動作</h2>
+    <div class="rounded-2xl p-4 mb-5" style="background:var(--card);border:1px solid var(--line)">
+      <label class="text-xs font-medium" style="color:var(--muted)">分類 ＋ 動作名稱</label>
+      <div class="flex gap-2 mt-1">
+        <select id="newExCat" class="px-2 py-2.5 text-sm w-[92px] shrink-0"></select>
+        <input id="newExName" type="text" class="flex-1 min-w-0 px-3 py-2.5 text-sm" placeholder="例如：保加利亞分腿蹲">
+      </div>
+      <button id="btnAddEx" class="w-full mt-2.5 py-2.5 rounded-xl font-bold text-sm" style="background:var(--accent);color:#fff">＋ 新增動作</button>
+    </div>
+
+    <h2 class="display font-bold text-sm tracking-wider mb-3">批次新增（Excel）</h2>
+    <div class="rounded-2xl p-4 mb-5" style="background:var(--card);border:1px solid var(--line)">
+      <p class="text-xs leading-relaxed mb-3" style="color:var(--muted)">下載範本後，在 Excel／Numbers 依欄位分類貼上多筆動作名稱，存檔後上傳即可一次新增，不用逐筆輸入。此功能只會新增或更新分類，不會刪除既有動作。</p>
+      <div class="flex gap-2">
+        <button id="btnDownloadExcel" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--card2);border:1px solid var(--line)">⬇ 下載 Excel 範本</button>
+        <label class="flex-1 py-2.5 rounded-xl text-sm font-bold text-center cursor-pointer" style="background:var(--card2);border:1px solid var(--line)">
+          ⬆ 上傳 Excel<input id="importExcelFile" type="file" accept=".xlsx,.xls" class="hidden">
+        </label>
+      </div>
+    </div>
+
+    <h2 class="display font-bold text-sm tracking-wider mb-3">動作庫同步（JSON）</h2>
+    <div class="rounded-2xl p-4 mb-5" style="background:var(--card);border:1px solid var(--line)">
+      <p class="text-xs leading-relaxed mb-3" style="color:var(--muted)">在電腦用「動作庫管理（桌面版）」整理好動作後下載 JSON，這裡上傳即可同步到手機；也可以先把手機的動作庫下載成 JSON，帶到電腦繼續編輯。同樣只新增或更新分類，不會刪除。</p>
+      <div class="flex gap-2">
+        <button id="btnExportExercises" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--card2);border:1px solid var(--line)">⬇ 下載動作庫 JSON</button>
+        <label class="flex-1 py-2.5 rounded-xl text-sm font-bold text-center cursor-pointer" style="background:var(--card2);border:1px solid var(--line)">
+          ⬆ 上傳動作庫 JSON<input id="importExerciseJsonFile" type="file" accept=".json" class="hidden">
+        </label>
+      </div>
+    </div>
+
+    <h2 class="display font-bold text-sm tracking-wider mb-3">動作分類管理</h2>
+    <div id="exManageList" class="space-y-2 mb-8"></div>
+
+    <h2 class="display font-bold text-sm tracking-wider mb-3">完整資料備份（含訓練紀錄）</h2>
+    <div class="rounded-2xl p-4 space-y-3" style="background:var(--card);border:1px solid var(--line)">
+      <p class="text-xs leading-relaxed" style="color:var(--muted)">資料儲存在此瀏覽器的 LocalStorage。換手機或清除瀏覽資料前，請先匯出備份（含所有訓練紀錄，會整份取代，非新增）。</p>
+      <div class="flex gap-2">
+        <button id="btnExport" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--card2);border:1px solid var(--line)">⬇ 匯出 JSON</button>
+        <label class="flex-1 py-2.5 rounded-xl text-sm font-bold text-center cursor-pointer" style="background:var(--card2);border:1px solid var(--line)">
+          ⬆ 匯入 JSON<input id="importFile" type="file" accept=".json" class="hidden">
+        </label>
+      </div>
+      <button id="btnWipe" class="w-full py-2.5 rounded-xl text-sm font-bold" style="background:var(--danger-soft);border:1px solid var(--danger);color:var(--danger)">清除全部資料</button>
+    </div>
+  </div>
+</div>
+
+<!-- 底部導覽列 -->
+<nav class="fixed bottom-0 left-0 right-0 z-30" style="background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-top:1px solid var(--line)">
+  <div class="max-w-md mx-auto grid grid-cols-4 pb-[env(safe-area-inset-bottom)]">
+    <button class="nav-btn active py-2.5 flex flex-col items-center gap-0.5" data-tab="log">
+      <span class="text-xl leading-none">✏️</span><span class="text-[10px] font-medium">記錄</span>
+      <span class="nav-bar h-0.5 w-6 rounded-full" style="background:var(--accent)"></span>
+    </button>
+    <button class="nav-btn py-2.5 flex flex-col items-center gap-0.5" data-tab="history">
+      <span class="text-xl leading-none">📅</span><span class="text-[10px] font-medium">歷史</span>
+      <span class="nav-bar h-0.5 w-6 rounded-full" style="background:var(--accent)"></span>
+    </button>
+    <button class="nav-btn py-2.5 flex flex-col items-center gap-0.5" data-tab="stats">
+      <span class="text-xl leading-none">📈</span><span class="text-[10px] font-medium">統計</span>
+      <span class="nav-bar h-0.5 w-6 rounded-full" style="background:var(--accent)"></span>
+    </button>
+    <button class="nav-btn py-2.5 flex flex-col items-center gap-0.5" data-tab="manage">
+      <span class="text-xl leading-none">⚙️</span><span class="text-[10px] font-medium">管理</span>
+      <span class="nav-bar h-0.5 w-6 rounded-full" style="background:var(--accent)"></span>
+    </button>
+  </div>
+</nav>
+
+<script>
+"use strict";
+const STORAGE_KEY = "ironLogData_v2";
+const LEGACY_KEY  = "ironLogData_v1";
+
+/* 動作分類：pos(上肢/下肢) + dir(推/拉) 系統化決定圖示畫法 */
+const CATS = [
+  { id:"upper_push", label:"上肢推", pos:"upper", dir:"push" },
+  { id:"upper_pull", label:"上肢拉", pos:"upper", dir:"pull" },
+  { id:"lower_push", label:"下肢推", pos:"lower", dir:"push" },
+  { id:"lower_pull", label:"下肢拉", pos:"lower", dir:"pull" }
+];
+function catIcon(cat){
+  const barY = cat.pos==="upper" ? 7 : 17;
+  const y1 = cat.pos==="upper" ? 15 : 9;
+  const y2 = cat.pos==="upper" ? 18 : 6;
+  const path = cat.dir==="push"
+    ? `M9 ${y1} L6 ${y2} M15 ${y1} L18 ${y2}`
+    : `M7 ${y1} L10 ${y2} M17 ${y1} L14 ${y2}`;
+  return `<svg class="cat-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="4" y1="${barY}" x2="20" y2="${barY}"/>
+    <line x1="4" y1="${barY-2.5}" x2="4" y2="${barY+2.5}"/>
+    <line x1="20" y1="${barY-2.5}" x2="20" y2="${barY+2.5}"/>
+    <path d="${path}"/>
+  </svg>`;
+}
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function escHtml(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function fmtDate(iso){
+  const [y,m,d] = iso.split("-");
+  const wd = "日一二三四五六"[new Date(iso+"T00:00:00").getDay()];
+  return `${y}/${m}/${d}（${wd}）`;
+}
+
+function getDefaultState(){
+  const mk = (n,cat) => ({ id: uid(), name:n, cat });
+  return {
+    exercises: [
+      mk("臥推","upper_push"),
+      mk("肩推","upper_push"),
+      mk("引體向上","upper_pull"),
+      mk("槓鈴划船","upper_pull"),
+      mk("深蹲","lower_push"),
+      mk("硬舉","lower_pull")
+    ],
+    logs: [] // {id, date:"YYYY-MM-DD", exId, weight, reps, sets, note}
+  };
+}
+
+function loadData(){
+  let s = null;
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(raw){ try{ s = JSON.parse(raw); }catch(e){} }
+  if(!s || !s.exercises || !s.logs){
+    const legacy = localStorage.getItem(LEGACY_KEY);
+    if(legacy){ try{ s = JSON.parse(legacy); }catch(e){} }
+  }
+  if(!s || !s.exercises || !s.logs) s = getDefaultState();
+  const validCats = CATS.map(c=>c.id);
+  s.exercises.forEach(e=>{ if(!validCats.includes(e.cat)) e.cat = CATS[0].id; });
+  return s;
+}
+function saveData(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+let state = loadData();
+let selectedExId = state.exercises.length ? state.exercises[0].id : null;
+
+/* ---------- 通用 ---------- */
+function exName(id){ const e = state.exercises.find(x=>x.id===id); return e ? e.name : "（已刪除動作）"; }
+function volumeOf(l){ return (l.weight||0)*(l.reps||0)*(l.sets||0); }
+
+function afterLogChange(){
+  saveData();
+  renderTodayList();
+}
+function afterExerciseChange(){
+  saveData();
+  renderExPicker();
+  renderExManage();
+}
+function afterBulkChange(){
+  saveData();
+  renderExPicker();
+  renderTodayList();
+  renderHistory();
+  renderStats();
+  renderExManage();
+}
+
+/* ---------- 槓片計算 ---------- */
+const PLATES = [
+  {w:25,  c:"#C75A52", t:"#FFFFFF"},
+  {w:20,  c:"#4A6FA0", t:"#FFFFFF"},
+  {w:15,  c:"#D9AE55", t:"#2B2E2A"},
+  {w:10,  c:"#5A9A6C", t:"#FFFFFF"},
+  {w:5,   c:"#ECECE9", t:"#2B2E2A"},
+  {w:2.5, c:"#33383A", t:"#F5F6F4"},
+  {w:1.25,c:"#A8ADB3", t:"#2B2E2A"}
+];
+function renderPlateCalc(){
+  const box = document.getElementById("plateCalc");
+  const total = parseFloat(document.getElementById("inWeight").value) || 0;
+  const BAR = 20;
+  if(total < BAR){
+    box.innerHTML = `<span class="text-xs" style="color:var(--muted)">重量低於空槓 ${BAR}kg（或使用啞鈴／機械式）</span>`;
+    return;
+  }
+  let side = (total - BAR) / 2;
+  const used = [];
+  PLATES.forEach(p=>{ while(side >= p.w - 1e-9){ used.push(p); side -= p.w; } });
+  let html = `<span class="text-xs num mr-1" style="color:var(--muted)">槓20</span>`;
+  html += used.map(p=>{
+    const size = 30 + Math.round(p.w*0.9);
+    return `<span class="plate" style="width:${size}px;height:${size}px;background:${p.c};color:${p.t};font-size:${p.w>=10?11:9}px">${p.w}</span>`;
+  }).join("");
+  if(side > 0.01) html += `<span class="text-xs num ml-1" style="color:var(--danger)">餘 ${side.toFixed(2)}kg 無法配片</span>`;
+  if(!used.length) html += `<span class="text-xs" style="color:var(--muted)">空槓</span>`;
+  box.innerHTML = html;
+}
+
+/* ---------- 動作選擇（紀錄頁：四大分類收合，預設收合） ---------- */
+function updateSelectedExDisplay(){
+  const el = document.getElementById("selectedExDisplay");
+  if(!el) return;
+  el.innerHTML = selectedExId
+    ? `已選動作：<span style="color:var(--accent)">${escHtml(exName(selectedExId))}</span>`
+    : `<span style="color:var(--muted)">尚未選擇動作，請展開分類挑選</span>`;
+}
+
+function renderExPicker(){
+  const wrap = document.getElementById("exPicker");
+  if(!state.exercises.length){
+    wrap.innerHTML = `<div class="text-xs text-center py-4" style="color:var(--muted)">尚無動作，請先到「管理」新增</div>`;
+    selectedExId = null;
+    updateSelectedExDisplay();
+    return;
+  }
+  if(!state.exercises.find(e=>e.id===selectedExId)) selectedExId = state.exercises[0].id;
+
+  wrap.innerHTML = CATS.map(cat=>{
+    const list = state.exercises.filter(e=>e.cat===cat.id);
+    const btns = list.length
+      ? list.map(e=>`<button class="ex-btn ${e.id===selectedExId?"active":""} text-sm px-3.5 py-2 rounded-xl" data-expick="${e.id}">${escHtml(e.name)}</button>`).join("")
+      : `<span class="text-xs" style="color:var(--muted)">此分類尚無動作</span>`;
+    return `
+    <details class="rounded-xl overflow-hidden" style="background:var(--card2);border:1px solid var(--line)">
+      <summary class="flex items-center justify-between px-3 py-2.5 cursor-pointer">
+        <span class="text-sm font-bold flex items-center gap-1.5">${catIcon(cat)}${cat.label}</span>
+        <span class="text-xs flex items-center gap-1" style="color:var(--muted)">${list.length} 個 <span class="chev">▾</span></span>
+      </summary>
+      <div class="flex flex-wrap gap-2 px-3 pb-3 pt-1">${btns}</div>
+    </details>`;
+  }).join("");
+
+  wrap.querySelectorAll("[data-expick]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      selectedExId = btn.dataset.expick;
+      wrap.querySelectorAll("[data-expick]").forEach(b=>{
+        b.classList.toggle("active", b.dataset.expick===selectedExId);
+      });
+      updateSelectedExDisplay();
+    });
+  });
+  updateSelectedExDisplay();
+}
+
+/* ---------- 當日紀錄（以日期為單位收合，預設收合） ---------- */
+function renderTodayList(){
+  const date = document.getElementById("logDate").value || todayStr();
+  const logs = state.logs.filter(l=>l.date===date);
+  const box = document.getElementById("todayList");
+  if(!logs.length){
+    box.innerHTML = `<div class="rounded-2xl p-6 text-center text-sm" style="background:var(--card);border:1px dashed var(--line);color:var(--muted)">${fmtDate(date)} 還沒有紀錄，加一筆吧 💪</div>`;
+    return;
+  }
+  const vol = logs.reduce((a,l)=>a+volumeOf(l),0);
+  box.innerHTML = `
+  <details class="rounded-2xl overflow-hidden" style="background:var(--card);border:1px solid var(--line)">
+    <summary class="flex items-center justify-between p-3.5 cursor-pointer">
+      <div>
+        <div class="num font-bold text-sm">${fmtDate(date)}</div>
+        <div class="text-xs mt-0.5" style="color:var(--muted)">${logs.length} 筆紀錄</div>
+      </div>
+      <div class="text-right shrink-0 flex items-center gap-1.5">
+        <div>
+          <div class="num font-black" style="color:var(--accent)">${vol.toLocaleString()}</div>
+          <div class="text-[10px]" style="color:var(--muted)">kg 總量</div>
+        </div>
+        <span class="chev">▾</span>
+      </div>
+    </summary>
+    <div class="px-3.5 pb-3.5 space-y-2.5" style="border-top:1px solid var(--line)">
+      ${logs.map(l=>`
+        <div class="fadein flex items-center gap-3 pt-2.5">
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-sm">${escHtml(exName(l.exId))}</div>
+            <div class="num text-base font-black" style="color:var(--accent)">${l.weight}<span class="text-xs font-bold" style="color:var(--muted)"> kg × </span>${l.reps}<span class="text-xs font-bold" style="color:var(--muted)"> 次 × </span>${l.sets}<span class="text-xs font-bold" style="color:var(--muted)"> 組</span></div>
+            ${l.note?`<div class="text-xs mt-0.5 truncate" style="color:var(--muted)">${escHtml(l.note)}</div>`:""}
+          </div>
+          <div class="text-right shrink-0">
+            <div class="num text-xs" style="color:var(--muted)">${volumeOf(l).toLocaleString()} kg</div>
+            <button class="text-xs mt-1 px-2 py-1 rounded-lg" style="color:var(--danger);background:var(--danger-soft)" data-del="${l.id}">刪除</button>
+          </div>
+        </div>`).join("")}
+    </div>
+  </details>`;
+  box.querySelectorAll("[data-del]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      state.logs = state.logs.filter(x=>x.id!==btn.dataset.del);
+      afterLogChange();
+    });
+  });
+}
+
+/* ---------- 歷史（以日期為單位收合，預設收合） ---------- */
+function renderHistory(){
+  const box = document.getElementById("historyList");
+  if(!state.logs.length){
+    box.innerHTML = `<div class="rounded-2xl p-6 text-center text-sm" style="background:var(--card);border:1px dashed var(--line);color:var(--muted)">尚無任何訓練紀錄</div>`;
+    return;
+  }
+  const byDate = {};
+  state.logs.forEach(l=>{ (byDate[l.date] = byDate[l.date] || []).push(l); });
+  const dates = Object.keys(byDate).sort().reverse();
+  box.innerHTML = dates.map(d=>{
+    const logs = byDate[d];
+    const vol = logs.reduce((a,l)=>a+volumeOf(l),0);
+    const exSet = [...new Set(logs.map(l=>exName(l.exId)))];
+    return `
+    <details class="rounded-2xl overflow-hidden" style="background:var(--card);border:1px solid var(--line)">
+      <summary class="flex items-center justify-between p-3.5 cursor-pointer">
+        <div>
+          <div class="num font-bold text-sm">${fmtDate(d)}</div>
+          <div class="text-xs mt-0.5 truncate max-w-[200px]" style="color:var(--muted)">${escHtml(exSet.join("、"))}</div>
+        </div>
+        <div class="text-right shrink-0 flex items-center gap-1.5">
+          <div>
+            <div class="num font-black" style="color:var(--accent)">${vol.toLocaleString()}</div>
+            <div class="text-[10px]" style="color:var(--muted)">kg 總量・${logs.length} 筆</div>
+          </div>
+          <span class="chev">▾</span>
+        </div>
+      </summary>
+      <div class="px-3.5 pb-3.5 space-y-1.5" style="border-top:1px solid var(--line)">
+        ${logs.map(l=>`
+          <div class="flex items-center justify-between pt-2 text-sm">
+            <span class="font-medium">${escHtml(exName(l.exId))}${l.note?`<span class="text-xs ml-1" style="color:var(--muted)">${escHtml(l.note)}</span>`:""}</span>
+            <span class="num font-bold">${l.weight}kg × ${l.reps} × ${l.sets}</span>
+          </div>`).join("")}
+      </div>
+    </details>`;
+  }).join("");
+}
+
+/* ---------- 統計 ---------- */
+function epley1RM(w,r){ return r<=1 ? w : w*(1+r/30); }
+
+function renderStats(){
+  const chart = document.getElementById("weeklyChart");
+  const now = new Date(); now.setHours(0,0,0,0);
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((now.getDay()+6)%7));
+  const weeks = [];
+  for(let i=7;i>=0;i--){
+    const start = new Date(monday); start.setDate(monday.getDate()-i*7);
+    const end = new Date(start); end.setDate(start.getDate()+6);
+    const s = start.toISOString().slice(0,10), e = end.toISOString().slice(0,10);
+    const vol = state.logs.filter(l=>l.date>=s && l.date<=e).reduce((a,l)=>a+volumeOf(l),0);
+    weeks.push({ label:(start.getMonth()+1)+"/"+start.getDate(), vol });
+  }
+  const max = Math.max(...weeks.map(w=>w.vol), 1);
+  const W=320, H=150, pad=4, bw=W/8;
+  let bars = "";
+  weeks.forEach((w,idx)=>{
+    const h = Math.round((w.vol/max)*(H-30));
+    const x = idx*bw+pad, y = H-20-h;
+    bars += `<rect x="${x}" y="${y}" width="${bw-pad*2}" height="${Math.max(h,2)}" rx="4" fill="${idx===7?"#B8935B":"#CBD5CE"}"/>`;
+    if(w.vol>0) bars += `<text x="${x+(bw-pad*2)/2}" y="${y-5}" text-anchor="middle" font-size="8.5" fill="#737F76" font-family="Big Shoulders Display">${w.vol>=1000?(w.vol/1000).toFixed(1)+"k":w.vol}</text>`;
+    bars += `<text x="${x+(bw-pad*2)/2}" y="${H-6}" text-anchor="middle" font-size="8.5" fill="#737F76" font-family="Big Shoulders Display">${w.label}</text>`;
+  });
+  chart.innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="w-full">${bars}</svg>`;
+
+  const box = document.getElementById("prList");
+  const rows = state.exercises.map(e=>{
+    const logs = state.logs.filter(l=>l.exId===e.id);
+    if(!logs.length) return null;
+    const maxW = logs.reduce((a,l)=>Math.max(a,l.weight),0);
+    const best = logs.reduce((a,l)=> epley1RM(l.weight,l.reps) > epley1RM(a.weight,a.reps) ? l : a, logs[0]);
+    const last = logs.slice().sort((a,b)=>a.date<b.date?1:-1)[0];
+    return { name:e.name, maxW, e1rm:epley1RM(best.weight,best.reps), n:logs.length, lastDate:last.date };
+  }).filter(Boolean).sort((a,b)=>b.maxW-a.maxW);
+  if(!rows.length){
+    box.innerHTML = `<div class="rounded-2xl p-6 text-center text-sm" style="background:var(--card);border:1px dashed var(--line);color:var(--muted)">累積紀錄後這裡會顯示各動作最佳表現</div>`;
+    return;
+  }
+  box.innerHTML = rows.map(r=>`
+    <div class="rounded-2xl p-3.5 flex items-center justify-between" style="background:var(--card);border:1px solid var(--line)">
+      <div>
+        <div class="font-bold text-sm">${escHtml(r.name)}</div>
+        <div class="text-xs mt-0.5" style="color:var(--muted)">${r.n} 筆紀錄・最近 ${r.lastDate.replaceAll("-","/")}</div>
+      </div>
+      <div class="text-right">
+        <div class="num text-xl font-black" style="color:var(--gold)">${r.maxW}<span class="text-xs" style="color:var(--muted)"> kg 最重</span></div>
+        <div class="num text-xs" style="color:var(--muted)">估計 1RM ≈ ${r.e1rm.toFixed(1)} kg</div>
+      </div>
+    </div>`).join("");
+}
+
+/* ---------- 動作管理（四大分類收合，預設收合） ---------- */
+function renderExManage(){
+  const box = document.getElementById("exManageList");
+  box.innerHTML = CATS.map(cat=>{
+    const list = state.exercises.filter(e=>e.cat===cat.id);
+    const rows = list.length
+      ? list.map(e=>{
+          const n = state.logs.filter(l=>l.exId===e.id).length;
+          return `
+          <div class="rounded-xl p-2.5 flex items-center gap-2" style="background:var(--card);border:1px solid var(--line)">
+            <div class="flex-1 min-w-0">
+              <div class="font-bold text-sm truncate">${escHtml(e.name)}</div>
+              <div class="text-[11px]" style="color:var(--muted)">${n} 筆紀錄</div>
+            </div>
+            <button class="text-xs px-2.5 py-1.5 rounded-lg" style="background:var(--card2);border:1px solid var(--line)" data-rename="${e.id}">改名</button>
+            <button class="text-xs px-2.5 py-1.5 rounded-lg" style="color:var(--danger);background:var(--danger-soft)" data-delex="${e.id}">刪除</button>
+          </div>`;
+        }).join("")
+      : `<div class="text-xs text-center py-3" style="color:var(--muted)">此分類尚無動作</div>`;
+    return `
+    <details class="rounded-2xl overflow-hidden" style="background:var(--card2);border:1px solid var(--line)">
+      <summary class="flex items-center justify-between p-3.5 cursor-pointer">
+        <span class="text-sm font-bold flex items-center gap-1.5">${catIcon(cat)}${cat.label}</span>
+        <span class="text-xs flex items-center gap-1" style="color:var(--muted)">${list.length} 個動作 <span class="chev">▾</span></span>
+      </summary>
+      <div class="px-3.5 pb-3.5 space-y-2" style="border-top:1px solid var(--line)">
+        <div class="pt-2 space-y-2">${rows}</div>
+      </div>
+    </details>`;
+  }).join("");
+
+  box.querySelectorAll("[data-rename]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const e = state.exercises.find(x=>x.id===btn.dataset.rename);
+      const name = prompt("動作新名稱：", e.name);
+      if(name && name.trim()){ e.name = name.trim(); afterExerciseChange(); }
+    });
+  });
+  box.querySelectorAll("[data-delex]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const id = btn.dataset.delex;
+      const n = state.logs.filter(l=>l.exId===id).length;
+      const msg = n ? `此動作有 ${n} 筆紀錄，刪除動作將一併刪除這些紀錄。確定刪除？` : "確定刪除此動作？";
+      if(!confirm(msg)) return;
+      state.exercises = state.exercises.filter(x=>x.id!==id);
+      state.logs = state.logs.filter(l=>l.exId!==id);
+      afterExerciseChange();
+    });
+  });
+}
+
+/* ---------- 新增動作分類下拉選單 ---------- */
+document.getElementById("newExCat").innerHTML = CATS.map(c=>`<option value="${c.id}">${c.label}</option>`).join("");
+
+/* ---------- 新增紀錄 ---------- */
+document.getElementById("btnAdd").addEventListener("click", ()=>{
+  if(!selectedExId){ alert("請先選擇（或到管理新增）訓練動作"); return; }
+  const weight = parseFloat(document.getElementById("inWeight").value);
+  const reps = parseInt(document.getElementById("inReps").value,10);
+  const sets = parseInt(document.getElementById("inSets").value,10);
+  const date = document.getElementById("logDate").value || todayStr();
+  if(!(weight>=0) || !(reps>0) || !(sets>0)){ alert("請確認重量、次數、組數為有效數字"); return; }
+  state.logs.push({
+    id: uid(), date, exId: selectedExId,
+    weight, reps, sets,
+    note: document.getElementById("inNote").value.trim()
+  });
+  document.getElementById("inNote").value = "";
+  afterLogChange();
+  const btn = document.getElementById("btnAdd");
+  btn.textContent = "✓ 已記錄";
+  setTimeout(()=>{ btn.textContent = "＋ 記錄這一筆"; }, 900);
+});
+
+/* ---------- 步進按鈕 ---------- */
+document.querySelectorAll("[data-step]").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    const map = { w:"inWeight", r:"inReps", s:"inSets" };
+    const el = document.getElementById(map[btn.dataset.step]);
+    const delta = parseFloat(btn.dataset.delta);
+    let v = parseFloat(el.value) || 0;
+    v = Math.max(0, Math.round((v+delta)*100)/100);
+    el.value = (btn.dataset.step==="w") ? v : Math.round(v);
+    if(btn.dataset.step==="w") renderPlateCalc();
+  });
+});
+document.getElementById("inWeight").addEventListener("input", renderPlateCalc);
+document.getElementById("logDate").addEventListener("change", renderTodayList);
+
+/* ---------- 管理：新增動作 ---------- */
+document.getElementById("btnAddEx").addEventListener("click", ()=>{
+  const nameEl = document.getElementById("newExName");
+  const catEl = document.getElementById("newExCat");
+  const name = nameEl.value.trim();
+  if(!name) return;
+  if(state.exercises.some(e=>e.name===name)){ alert("已有同名動作"); return; }
+  state.exercises.push({ id: uid(), name, cat: catEl.value });
+  nameEl.value = "";
+  afterExerciseChange();
+});
+
+/* ---------- 動作庫批次合併（Excel／JSON 共用；只新增或更新分類，不刪除） ---------- */
+function normalizeCat(catRaw){
+  const found = CATS.find(c=>c.id===catRaw || c.label===String(catRaw||"").trim());
+  return found ? found.id : null;
+}
+function mergeExercisesWithPreview(list, sourceLabel){
+  const toAdd = [];
+  const toUpdate = [];
+  const seen = new Set();
+  list.forEach(item=>{
+    const name = String((item && item.name) || "").trim();
+    if(!name || seen.has(name)) return;
+    seen.add(name);
+    const cat = normalizeCat(item.cat) || CATS[0].id;
+    const existing = state.exercises.find(e=>e.name===name);
+    if(existing){
+      if(existing.cat !== cat) toUpdate.push({ existing, cat });
+    } else {
+      toAdd.push({ name, cat });
+    }
+  });
+  if(!toAdd.length && !toUpdate.length){
+    alert(`${sourceLabel}中沒有可新增或更新的動作（可能都已存在且分類相同）`);
+    return;
+  }
+  const lines = [];
+  if(toAdd.length) lines.push(`新增 ${toAdd.length} 個動作：${toAdd.map(x=>x.name).join("、")}`);
+  if(toUpdate.length) lines.push(`更新 ${toUpdate.length} 個動作的分類：${toUpdate.map(x=>x.existing.name).join("、")}`);
+  const ok = confirm(`來自${sourceLabel}的匯入預覽：\n\n${lines.join("\n")}\n\n不會刪除任何現有動作，確定套用？`);
+  if(!ok) return;
+  toAdd.forEach(x=> state.exercises.push({ id: uid(), name:x.name, cat:x.cat }));
+  toUpdate.forEach(x=> x.existing.cat = x.cat);
+  afterExerciseChange();
+  alert(`匯入完成：新增 ${toAdd.length} 個、更新 ${toUpdate.length} 個`);
+}
+
+/* ---------- 批次新增：Excel 範本下載／上傳 ---------- */
+document.getElementById("btnDownloadExcel").addEventListener("click", ()=>{
+  const cols = CATS.map(cat => state.exercises.filter(e=>e.cat===cat.id).map(e=>e.name));
+  const maxLen = Math.max(...cols.map(c=>c.length), 1);
+  const headers = CATS.map(c=>c.label);
+  const rows = [headers];
+  for(let i=0;i<maxLen;i++){
+    rows.push(CATS.map((c,idx)=> cols[idx][i] || ""));
+  }
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = CATS.map(()=>({ wch:16 }));
+  const noteWs = XLSX.utils.aoa_to_sheet([
+    ["使用說明"],
+    ["1. 在對應分類欄位下方新增一列，填入動作名稱即可（可整欄貼上多筆）"],
+    ["2. 同一個動作名稱重複上傳只會更新分類，不會產生重複，也不會刪除其他動作"],
+    ["3. 存檔後，回到「鐵量日誌」App → 管理 → 批次新增（Excel）→ 上傳 Excel"]
+  ]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "動作清單");
+  XLSX.utils.book_append_sheet(wb, noteWs, "使用說明");
+  XLSX.writeFile(wb, "iron-log-exercises-"+todayStr()+".xlsx");
+});
+
+document.getElementById("importExcelFile").addEventListener("change", e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = evt=>{
+    try{
+      const wb = XLSX.read(evt.target.result, {type:"array"});
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, defval:""});
+      if(!rows.length) throw new Error("空白檔案");
+      const headers = rows[0].map(h=>String(h||"").trim());
+      const colCat = headers.map(h=> normalizeCat(h));
+      if(colCat.every(c=>!c)) throw new Error("找不到分類欄位標題");
+      const list = [];
+      for(let r=1;r<rows.length;r++){
+        const row = rows[r];
+        colCat.forEach((cat, idx)=>{
+          if(!cat) return;
+          const val = String(row[idx]||"").trim();
+          if(val) list.push({ name: val, cat });
+        });
+      }
+      if(!list.length){ alert("Excel 中沒有讀到任何動作名稱"); return; }
+      mergeExercisesWithPreview(list, "Excel");
+    }catch(err){ alert("匯入失敗，請確認上傳的是本工具下載的 Excel 範本格式"); }
+    e.target.value = "";
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+/* ---------- 動作庫同步：JSON 下載／上傳 ---------- */
+document.getElementById("btnExportExercises").addEventListener("click", ()=>{
+  const list = state.exercises.map(e=>({ name: e.name, cat: e.cat }));
+  const blob = new Blob([JSON.stringify(list,null,2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "iron-log-exercises-"+todayStr()+".json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+document.getElementById("importExerciseJsonFile").addEventListener("change", e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = evt=>{
+    try{
+      const list = JSON.parse(evt.target.result);
+      if(!Array.isArray(list)) throw new Error("格式不符");
+      mergeExercisesWithPreview(list, "JSON 檔");
+    }catch(err){ alert("匯入失敗：JSON 格式不正確，請確認上傳的是動作庫 JSON（不是完整備份檔）"); }
+    e.target.value = "";
+  };
+  reader.readAsText(file);
+});
+
+/* ---------- 備份 ---------- */
+document.getElementById("btnExport").addEventListener("click", ()=>{
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "iron-log-backup-"+todayStr()+".json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+document.getElementById("importFile").addEventListener("change", e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = evt=>{
+    try{
+      const data = JSON.parse(evt.target.result);
+      if(!data.exercises || !data.logs) throw new Error("格式不符");
+      if(!confirm(`匯入將取代現有資料（動作 ${data.exercises.length} 個、紀錄 ${data.logs.length} 筆）。確定？`)) return;
+      const validCats = CATS.map(c=>c.id);
+      data.exercises.forEach(e=>{ if(!validCats.includes(e.cat)) e.cat = CATS[0].id; });
+      state = data;
+      selectedExId = state.exercises.length ? state.exercises[0].id : null;
+      afterBulkChange();
+      alert("匯入完成 ✓");
+    }catch(err){ alert("匯入失敗：檔案格式不正確"); }
+    e.target.value = "";
+  };
+  reader.readAsText(file);
+});
+document.getElementById("btnWipe").addEventListener("click", ()=>{
+  if(!confirm("確定清除全部資料？此動作無法復原（建議先匯出備份）。")) return;
+  state = getDefaultState();
+  selectedExId = state.exercises[0].id;
+  afterBulkChange();
+});
+
+/* ---------- Tab 切換 ---------- */
+function switchTab(tab){
+  const panel = document.getElementById("tab-"+tab);
+  if(!panel) return;
+  if(tab==="log"){ renderExPicker(); renderTodayList(); renderPlateCalc(); }
+  if(tab==="history") renderHistory();
+  if(tab==="stats") renderStats();
+  if(tab==="manage") renderExManage();
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.toggle("active", b.dataset.tab===tab));
+  document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
+  panel.classList.add("active");
+  window.scrollTo({top:0,left:0,behavior:"instant"});
+}
+document.querySelectorAll(".nav-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=> switchTab(btn.dataset.tab));
+});
+document.getElementById("goManageEx").addEventListener("click", ()=> switchTab("manage"));
+
+/* ---------- 初始化 ---------- */
+document.getElementById("logDate").value = todayStr();
+document.getElementById("hdrDate").textContent = fmtDate(todayStr());
+renderExPicker();
+renderTodayList();
+renderPlateCalc();
+</script>
+</body>
+</html>
