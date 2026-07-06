@@ -35,6 +35,8 @@
   .nav-bar{ opacity:0; transition:opacity .15s; }
   .ex-btn{ background:var(--card); border:1px solid var(--line); color:var(--ink); }
   .ex-btn.active{ background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700; }
+  .equip-btn{ background:var(--card2); border:1px solid var(--line); color:var(--ink); transition:background .12s,color .12s; }
+  .equip-btn.active{ background:var(--accent); border-color:var(--accent); color:#fff; }
   input,select,textarea{ background:var(--card2); border:1px solid var(--line); color:var(--ink);
     border-radius:.75rem; outline:none; }
   input:focus,select:focus{ border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
@@ -85,6 +87,7 @@
           <button id="goManageEx" class="text-xs font-medium" style="color:var(--accent)">管理動作 ›</button>
         </div>
         <div id="selectedExDisplay" class="text-sm font-bold mt-1.5 mb-2"></div>
+        <div id="equipToggle" class="grid grid-cols-2 gap-2 mb-2"></div>
         <div id="exPicker" class="space-y-2"></div>
       </div>
 
@@ -166,17 +169,22 @@
   <div id="tab-manage" class="tab-panel">
     <h2 class="display font-bold text-sm tracking-wider mb-3">新增動作</h2>
     <div class="rounded-2xl p-4 mb-5" style="background:var(--card);border:1px solid var(--line)">
-      <label class="text-xs font-medium" style="color:var(--muted)">分類 ＋ 動作名稱</label>
-      <div class="flex gap-2 mt-1">
-        <select id="newExCat" class="px-2 py-2.5 text-sm w-[92px] shrink-0"></select>
-        <input id="newExName" type="text" class="flex-1 min-w-0 px-3 py-2.5 text-sm" placeholder="例如：保加利亞分腿蹲">
+      <label class="text-xs font-medium" style="color:var(--muted)">器材</label>
+      <select id="newExEquip" class="w-full mt-1 px-3 py-2.5 text-sm"></select>
+
+      <div id="newExCatWrap" class="mt-3">
+        <label class="text-xs font-medium" style="color:var(--muted)">分類</label>
+        <select id="newExCat" class="w-full mt-1 px-3 py-2.5 text-sm"></select>
       </div>
+
+      <label class="text-xs font-medium mt-3 block" style="color:var(--muted)">動作名稱</label>
+      <input id="newExName" type="text" class="w-full mt-1 px-3 py-2.5 text-sm" placeholder="例如：波比跳">
       <button id="btnAddEx" class="w-full mt-2.5 py-2.5 rounded-xl font-bold text-sm" style="background:var(--accent);color:#fff">＋ 新增動作</button>
     </div>
 
     <h2 class="display font-bold text-sm tracking-wider mb-3">批次新增（Excel）</h2>
     <div class="rounded-2xl p-4 mb-5" style="background:var(--card);border:1px solid var(--line)">
-      <p class="text-xs leading-relaxed mb-3" style="color:var(--muted)">下載範本後，在 Excel／Numbers 依欄位分類貼上多筆動作名稱，存檔後上傳即可一次新增，不用逐筆輸入。此功能只會新增或更新分類，不會刪除既有動作。</p>
+      <p class="text-xs leading-relaxed mb-3" style="color:var(--muted)">範本內含四張工作表（槓鈴／啞鈴／爆發動作／壺鈴）。槓鈴、啞鈴依分類欄位填寫；爆發動作、壺鈴則是單欄，直接列出動作名稱即可。存檔後上傳，只會新增或更新，不會刪除既有動作。</p>
       <div class="flex gap-2">
         <button id="btnDownloadExcel" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--card2);border:1px solid var(--line)">⬇ 下載 Excel 範本</button>
         <label class="flex-1 py-2.5 rounded-xl text-sm font-bold text-center cursor-pointer" style="background:var(--card2);border:1px solid var(--line)">
@@ -187,7 +195,7 @@
 
     <h2 class="display font-bold text-sm tracking-wider mb-3">動作庫同步（JSON）</h2>
     <div class="rounded-2xl p-4 mb-5" style="background:var(--card);border:1px solid var(--line)">
-      <p class="text-xs leading-relaxed mb-3" style="color:var(--muted)">在電腦用「動作庫管理（桌面版）」整理好動作後下載 JSON，這裡上傳即可同步到手機；也可以先把手機的動作庫下載成 JSON，帶到電腦繼續編輯。同樣只新增或更新分類，不會刪除。</p>
+      <p class="text-xs leading-relaxed mb-3" style="color:var(--muted)">在電腦用「動作庫管理（桌面版）」整理好動作後下載 JSON，這裡上傳即可同步到手機；也可以先把手機的動作庫下載成 JSON，帶到電腦繼續編輯。同樣只新增或更新，不會刪除。</p>
       <div class="flex gap-2">
         <button id="btnExportExercises" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--card2);border:1px solid var(--line)">⬇ 下載動作庫 JSON</button>
         <label class="flex-1 py-2.5 rounded-xl text-sm font-bold text-center cursor-pointer" style="background:var(--card2);border:1px solid var(--line)">
@@ -197,6 +205,7 @@
     </div>
 
     <h2 class="display font-bold text-sm tracking-wider mb-3">動作分類管理</h2>
+    <div id="manageEquipToggle" class="grid grid-cols-2 gap-2 mb-3"></div>
     <div id="exManageList" class="space-y-2 mb-8"></div>
 
     <h2 class="display font-bold text-sm tracking-wider mb-3">完整資料備份（含訓練紀錄）</h2>
@@ -235,12 +244,60 @@
   </div>
 </nav>
 
+<!-- 自訂對話框：取代 prompt/confirm/alert，避免在「加入主畫面」模式下失效 -->
+<div id="modalOverlay" class="fixed inset-0 z-50 hidden items-center justify-center p-5" style="background:rgba(38,43,40,.4)">
+  <div class="w-full max-w-sm rounded-2xl p-5" style="background:var(--card)">
+    <h3 id="modalTitle" class="font-bold text-base mb-1.5"></h3>
+    <p id="modalMessage" class="text-sm mb-3 whitespace-pre-line" style="color:var(--muted)"></p>
+    <input id="modalInput" type="text" class="w-full px-3 py-2.5 text-sm mb-3 hidden">
+    <div class="flex gap-2">
+      <button id="modalCancelBtn" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--card2);border:1px solid var(--line)">取消</button>
+      <button id="modalConfirmBtn" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--accent);color:#fff">確定</button>
+    </div>
+  </div>
+</div>
+
 <script>
 "use strict";
-const STORAGE_KEY = "ironLogData_v2";
-const LEGACY_KEY  = "ironLogData_v1";
+const STORAGE_KEY = "ironLogData_v3";
+const LEGACY_KEYS = ["ironLogData_v2", "ironLogData_v1"];
 
-/* 動作分類：pos(上肢/下肢) + dir(推/拉) 系統化決定圖示畫法 */
+/* 器材：槓鈴／啞鈴需先選四大分類；爆發動作／壺鈴直接對應動作清單 */
+const EQUIPS = [
+  { id:"barbell",    label:"槓鈴",    grouped:true  },
+  { id:"dumbbell",   label:"啞鈴",    grouped:true  },
+  { id:"explosive",  label:"爆發動作", grouped:false },
+  { id:"kettlebell", label:"壺鈴",    grouped:false }
+];
+function equipIcon(eq){
+  if(eq.id === "barbell"){
+    return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="3" y1="12" x2="21" y2="12"/>
+      <line x1="3" y1="9" x2="3" y2="15"/>
+      <line x1="21" y1="9" x2="21" y2="15"/>
+      <line x1="6.5" y1="10" x2="6.5" y2="14"/>
+      <line x1="17.5" y1="10" x2="17.5" y2="14"/>
+    </svg>`;
+  }
+  if(eq.id === "dumbbell"){
+    return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="9" y1="12" x2="15" y2="12"/>
+      <circle cx="5" cy="12" r="3"/>
+      <circle cx="19" cy="12" r="3"/>
+    </svg>`;
+  }
+  if(eq.id === "kettlebell"){
+    return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8.5 10.5c0-3 1.6-6 3.5-6s3.5 3 3.5 6"/>
+      <circle cx="12" cy="15" r="6"/>
+    </svg>`;
+  }
+  return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M13 2 L6 14 H11 L10 22 L18 10 H13 Z"/>
+  </svg>`;
+}
+
+/* 動作分類：pos(上肢/下肢) + dir(推/拉) 系統化決定圖示畫法（僅槓鈴／啞鈴使用） */
 const CATS = [
   { id:"upper_push", label:"上肢推", pos:"upper", dir:"push" },
   { id:"upper_pull", label:"上肢拉", pos:"upper", dir:"pull" },
@@ -264,6 +321,59 @@ function catIcon(cat){
 
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 function escHtml(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+/* ---------- 自訂對話框（取代 prompt/confirm/alert） ----------
+   iOS「加入主畫面」的獨立模式下，原生 prompt() 常被靜默阻擋、confirm() 也不穩定，
+   改用畫面內的對話框，回傳 Promise：取消時 resolve(null)，確定時 resolve(輸入值或 true) */
+const modalOverlay = document.getElementById("modalOverlay");
+const modalTitle = document.getElementById("modalTitle");
+const modalMessage = document.getElementById("modalMessage");
+const modalInput = document.getElementById("modalInput");
+const modalCancelBtn = document.getElementById("modalCancelBtn");
+const modalConfirmBtn = document.getElementById("modalConfirmBtn");
+let modalResolve = null;
+
+function closeModal(result){
+  modalOverlay.classList.add("hidden");
+  modalOverlay.classList.remove("flex");
+  if(modalResolve){ modalResolve(result); modalResolve = null; }
+}
+modalOverlay.addEventListener("click", e=>{ if(e.target===modalOverlay) closeModal(null); });
+modalCancelBtn.addEventListener("click", ()=> closeModal(null));
+modalConfirmBtn.addEventListener("click", ()=>{
+  const usesInput = !modalInput.classList.contains("hidden");
+  closeModal(usesInput ? modalInput.value : true);
+});
+modalInput.addEventListener("keydown", e=>{ if(e.key==="Enter") modalConfirmBtn.click(); });
+
+function showModal({ title, message="", input=false, defaultValue="", confirmText="確定", cancelText="取消", danger=false, onlyOk=false }){
+  return new Promise(resolve=>{
+    modalResolve = resolve;
+    modalTitle.textContent = title;
+    modalMessage.textContent = message;
+    modalMessage.style.display = message ? "" : "none";
+    if(input){
+      modalInput.classList.remove("hidden");
+      modalInput.value = defaultValue;
+    } else {
+      modalInput.classList.add("hidden");
+    }
+    modalConfirmBtn.textContent = confirmText;
+    modalConfirmBtn.style.background = danger ? "var(--danger)" : "var(--accent)";
+    modalCancelBtn.style.display = onlyOk ? "none" : "";
+    modalCancelBtn.textContent = cancelText;
+    modalOverlay.classList.remove("hidden");
+    modalOverlay.classList.add("flex");
+    if(input) setTimeout(()=>{ modalInput.focus(); modalInput.select(); }, 50);
+  });
+}
+function showAlert(message, title=""){ return showModal({ title, message, onlyOk:true }); }
+function showConfirm(message, { title="", confirmText="確定", danger=false } = {}){
+  return showModal({ title, message, confirmText, danger });
+}
+function showPrompt(message, defaultValue="", { title="", confirmText="儲存" } = {}){
+  return showModal({ title, message, input:true, defaultValue, confirmText });
+}
 function todayStr(){
   const d = new Date();
   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
@@ -273,17 +383,22 @@ function fmtDate(iso){
   const wd = "日一二三四五六"[new Date(iso+"T00:00:00").getDay()];
   return `${y}/${m}/${d}（${wd}）`;
 }
+function equipObj(id){ return EQUIPS.find(e=>e.id===id) || EQUIPS[0]; }
 
 function getDefaultState(){
-  const mk = (n,cat) => ({ id: uid(), name:n, cat });
+  const mk = (n,cat,equip) => ({ id: uid(), name:n, cat, equip });
   return {
     exercises: [
-      mk("臥推","upper_push"),
-      mk("肩推","upper_push"),
-      mk("引體向上","upper_pull"),
-      mk("槓鈴划船","upper_pull"),
-      mk("深蹲","lower_push"),
-      mk("硬舉","lower_pull")
+      mk("槓鈴臥推","upper_push","barbell"),
+      mk("槓鈴划船","upper_pull","barbell"),
+      mk("深蹲","lower_push","barbell"),
+      mk("硬舉","lower_pull","barbell"),
+      mk("啞鈴臥推","upper_push","dumbbell"),
+      mk("啞鈴划船","upper_pull","dumbbell"),
+      mk("啞鈴保加利亞分腿蹲","lower_push","dumbbell"),
+      mk("啞鈴羅馬尼亞硬舉","lower_pull","dumbbell"),
+      mk("波比跳","upper_push","explosive"),
+      mk("壺鈴甩擺","lower_pull","kettlebell")
     ],
     logs: [] // {id, date:"YYYY-MM-DD", exId, weight, reps, sets, note}
   };
@@ -294,18 +409,28 @@ function loadData(){
   const raw = localStorage.getItem(STORAGE_KEY);
   if(raw){ try{ s = JSON.parse(raw); }catch(e){} }
   if(!s || !s.exercises || !s.logs){
-    const legacy = localStorage.getItem(LEGACY_KEY);
-    if(legacy){ try{ s = JSON.parse(legacy); }catch(e){} }
+    for(const key of LEGACY_KEYS){
+      const legacy = localStorage.getItem(key);
+      if(legacy){
+        try{ const parsed = JSON.parse(legacy); if(parsed && parsed.exercises && parsed.logs){ s = parsed; break; } }catch(e){}
+      }
+    }
   }
   if(!s || !s.exercises || !s.logs) s = getDefaultState();
   const validCats = CATS.map(c=>c.id);
-  s.exercises.forEach(e=>{ if(!validCats.includes(e.cat)) e.cat = CATS[0].id; });
+  const validEquips = EQUIPS.map(e=>e.id);
+  s.exercises.forEach(e=>{
+    if(!validCats.includes(e.cat)) e.cat = CATS[0].id;
+    if(!validEquips.includes(e.equip)) e.equip = EQUIPS[0].id;
+  });
   return s;
 }
 function saveData(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 
 let state = loadData();
 let selectedExId = state.exercises.length ? state.exercises[0].id : null;
+let selectedEquip = EQUIPS[0].id;   // 紀錄頁的器材篩選
+let manageEquip = EQUIPS[0].id;     // 管理頁的器材篩選
 
 /* ---------- 通用 ---------- */
 function exName(id){ const e = state.exercises.find(x=>x.id===id); return e ? e.name : "（已刪除動作）"; }
@@ -360,13 +485,43 @@ function renderPlateCalc(){
   box.innerHTML = html;
 }
 
-/* ---------- 動作選擇（紀錄頁：四大分類收合，預設收合） ---------- */
+/* ---------- 訓練動作選擇：先選器材；槓鈴／啞鈴再展開四大分類，其餘直接列出 ---------- */
 function updateSelectedExDisplay(){
   const el = document.getElementById("selectedExDisplay");
   if(!el) return;
-  el.innerHTML = selectedExId
-    ? `已選動作：<span style="color:var(--accent)">${escHtml(exName(selectedExId))}</span>`
-    : `<span style="color:var(--muted)">尚未選擇動作，請展開分類挑選</span>`;
+  if(!selectedExId){
+    el.innerHTML = `<span style="color:var(--muted)">尚未選擇動作，請先選器材再挑選</span>`;
+    return;
+  }
+  const ex = state.exercises.find(e=>e.id===selectedExId);
+  el.innerHTML = `已選動作：<span style="color:var(--accent)">${escHtml(exName(selectedExId))}</span>` +
+    (ex ? `<span class="text-xs font-normal" style="color:var(--muted)">〈${equipObj(ex.equip).label}〉</span>` : "");
+}
+
+function renderEquipToggle(){
+  const wrap = document.getElementById("equipToggle");
+  wrap.innerHTML = EQUIPS.map(eq=>`
+    <button class="equip-btn ${eq.id===selectedEquip?"active":""} flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm" data-equip="${eq.id}">${equipIcon(eq)}${eq.label}</button>
+  `).join("");
+  wrap.querySelectorAll("[data-equip]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      selectedEquip = btn.dataset.equip;
+      renderEquipToggle();
+      renderExPicker();
+    });
+  });
+}
+
+function bindExPickerButtons(wrap){
+  wrap.querySelectorAll("[data-expick]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      selectedExId = btn.dataset.expick;
+      wrap.querySelectorAll("[data-expick]").forEach(b=>{
+        b.classList.toggle("active", b.dataset.expick===selectedExId);
+      });
+      updateSelectedExDisplay();
+    });
+  });
 }
 
 function renderExPicker(){
@@ -379,30 +534,29 @@ function renderExPicker(){
   }
   if(!state.exercises.find(e=>e.id===selectedExId)) selectedExId = state.exercises[0].id;
 
-  wrap.innerHTML = CATS.map(cat=>{
-    const list = state.exercises.filter(e=>e.cat===cat.id);
-    const btns = list.length
-      ? list.map(e=>`<button class="ex-btn ${e.id===selectedExId?"active":""} text-sm px-3.5 py-2 rounded-xl" data-expick="${e.id}">${escHtml(e.name)}</button>`).join("")
-      : `<span class="text-xs" style="color:var(--muted)">此分類尚無動作</span>`;
-    return `
-    <details class="rounded-xl overflow-hidden" style="background:var(--card2);border:1px solid var(--line)">
-      <summary class="flex items-center justify-between px-3 py-2.5 cursor-pointer">
-        <span class="text-sm font-bold flex items-center gap-1.5">${catIcon(cat)}${cat.label}</span>
-        <span class="text-xs flex items-center gap-1" style="color:var(--muted)">${list.length} 個 <span class="chev">▾</span></span>
-      </summary>
-      <div class="flex flex-wrap gap-2 px-3 pb-3 pt-1">${btns}</div>
-    </details>`;
-  }).join("");
-
-  wrap.querySelectorAll("[data-expick]").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      selectedExId = btn.dataset.expick;
-      wrap.querySelectorAll("[data-expick]").forEach(b=>{
-        b.classList.toggle("active", b.dataset.expick===selectedExId);
-      });
-      updateSelectedExDisplay();
-    });
-  });
+  const eq = equipObj(selectedEquip);
+  if(eq.grouped){
+    wrap.innerHTML = CATS.map(cat=>{
+      const list = state.exercises.filter(e=>e.cat===cat.id && e.equip===selectedEquip);
+      const btns = list.length
+        ? list.map(e=>`<button class="ex-btn ${e.id===selectedExId?"active":""} text-sm px-3.5 py-2 rounded-xl" data-expick="${e.id}">${escHtml(e.name)}</button>`).join("")
+        : `<span class="text-xs" style="color:var(--muted)">此分類尚無${eq.label}動作</span>`;
+      return `
+      <details class="rounded-xl overflow-hidden" style="background:var(--card2);border:1px solid var(--line)">
+        <summary class="flex items-center justify-between px-3 py-2.5 cursor-pointer">
+          <span class="text-sm font-bold flex items-center gap-1.5">${catIcon(cat)}${cat.label}</span>
+          <span class="text-xs flex items-center gap-1" style="color:var(--muted)">${list.length} 個 <span class="chev">▾</span></span>
+        </summary>
+        <div class="flex flex-wrap gap-2 px-3 pb-3 pt-1">${btns}</div>
+      </details>`;
+    }).join("");
+  } else {
+    const list = state.exercises.filter(e=>e.equip===selectedEquip);
+    wrap.innerHTML = list.length
+      ? `<div class="flex flex-wrap gap-2 rounded-xl p-3" style="background:var(--card2);border:1px solid var(--line)">${list.map(e=>`<button class="ex-btn ${e.id===selectedExId?"active":""} text-sm px-3.5 py-2 rounded-xl" data-expick="${e.id}">${escHtml(e.name)}</button>`).join("")}</div>`
+      : `<div class="text-xs text-center py-4 rounded-xl" style="background:var(--card2);border:1px dashed var(--line);color:var(--muted)">尚無${eq.label}動作，請到「管理」新增</div>`;
+  }
+  bindExPickerButtons(wrap);
   updateSelectedExDisplay();
 }
 
@@ -548,50 +702,61 @@ function renderStats(){
     </div>`).join("");
 }
 
-/* ---------- 動作管理（四大分類收合，預設收合） ---------- */
-function renderExManage(){
-  const box = document.getElementById("exManageList");
-  box.innerHTML = CATS.map(cat=>{
-    const list = state.exercises.filter(e=>e.cat===cat.id);
-    const rows = list.length
-      ? list.map(e=>{
-          const n = state.logs.filter(l=>l.exId===e.id).length;
-          return `
-          <div class="rounded-xl p-2.5 flex items-center gap-2" style="background:var(--card);border:1px solid var(--line)">
-            <div class="flex-1 min-w-0">
-              <div class="font-bold text-sm truncate">${escHtml(e.name)}</div>
-              <div class="text-[11px]" style="color:var(--muted)">${n} 筆紀錄</div>
-            </div>
-            <button class="text-xs px-2.5 py-1.5 rounded-lg" style="background:var(--card2);border:1px solid var(--line)" data-rename="${e.id}">改名</button>
-            <button class="text-xs px-2.5 py-1.5 rounded-lg" style="color:var(--danger);background:var(--danger-soft)" data-delex="${e.id}">刪除</button>
-          </div>`;
-        }).join("")
-      : `<div class="text-xs text-center py-3" style="color:var(--muted)">此分類尚無動作</div>`;
-    return `
-    <details class="rounded-2xl overflow-hidden" style="background:var(--card2);border:1px solid var(--line)">
-      <summary class="flex items-center justify-between p-3.5 cursor-pointer">
-        <span class="text-sm font-bold flex items-center gap-1.5">${catIcon(cat)}${cat.label}</span>
-        <span class="text-xs flex items-center gap-1" style="color:var(--muted)">${list.length} 個動作 <span class="chev">▾</span></span>
-      </summary>
-      <div class="px-3.5 pb-3.5 space-y-2" style="border-top:1px solid var(--line)">
-        <div class="pt-2 space-y-2">${rows}</div>
-      </div>
-    </details>`;
-  }).join("");
-
-  box.querySelectorAll("[data-rename]").forEach(btn=>{
+/* ---------- 動作管理：先選器材；槓鈴／啞鈴展開四大分類，其餘直接列出（皆預設收合） ---------- */
+function renderManageEquipToggle(){
+  const wrap = document.getElementById("manageEquipToggle");
+  wrap.innerHTML = EQUIPS.map(eq=>`
+    <button class="equip-btn ${eq.id===manageEquip?"active":""} flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm" data-mequip="${eq.id}">${equipIcon(eq)}${eq.label}</button>
+  `).join("");
+  wrap.querySelectorAll("[data-mequip]").forEach(btn=>{
     btn.addEventListener("click", ()=>{
+      manageEquip = btn.dataset.mequip;
+      renderManageEquipToggle();
+      renderExManage();
+    });
+  });
+}
+
+function exRowHtml(e){
+  const n = state.logs.filter(l=>l.exId===e.id).length;
+  return `
+  <div class="rounded-xl p-2.5 flex items-center gap-2" style="background:var(--card);border:1px solid var(--line)">
+    <div class="flex-1 min-w-0">
+      <div class="font-bold text-sm truncate">${escHtml(e.name)}</div>
+      <div class="text-[11px]" style="color:var(--muted)">${n} 筆紀錄</div>
+    </div>
+    <select class="text-xs px-1.5 py-1.5 rounded-lg shrink-0" style="background:var(--accent-soft);color:var(--accent);border:none" data-equipselect="${e.id}">
+      ${EQUIPS.map(eq=>`<option value="${eq.id}" ${eq.id===e.equip?"selected":""}>${eq.label}</option>`).join("")}
+    </select>
+    <button class="text-xs px-2.5 py-1.5 rounded-lg" style="background:var(--card2);border:1px solid var(--line)" data-rename="${e.id}">改名</button>
+    <button class="text-xs px-2.5 py-1.5 rounded-lg" style="color:var(--danger);background:var(--danger-soft)" data-delex="${e.id}">刪除</button>
+  </div>`;
+}
+
+function bindExManageRowEvents(box){
+  box.querySelectorAll("[data-equipselect]").forEach(sel=>{
+    sel.addEventListener("change", ()=>{
+      const e = state.exercises.find(x=>x.id===sel.dataset.equipselect);
+      if(!e) return;
+      e.equip = sel.value;
+      afterExerciseChange();
+    });
+  });
+  box.querySelectorAll("[data-rename]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
       const e = state.exercises.find(x=>x.id===btn.dataset.rename);
-      const name = prompt("動作新名稱：", e.name);
-      if(name && name.trim()){ e.name = name.trim(); afterExerciseChange(); }
+      const name = await showPrompt("動作新名稱", e.name, { title:"動作改名" });
+      if(name===null) return;
+      if(name.trim()){ e.name = name.trim(); afterExerciseChange(); }
     });
   });
   box.querySelectorAll("[data-delex]").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
+    btn.addEventListener("click", async ()=>{
       const id = btn.dataset.delex;
       const n = state.logs.filter(l=>l.exId===id).length;
-      const msg = n ? `此動作有 ${n} 筆紀錄，刪除動作將一併刪除這些紀錄。確定刪除？` : "確定刪除此動作？";
-      if(!confirm(msg)) return;
+      const msg = n ? `此動作有 ${n} 筆紀錄，刪除動作將一併刪除這些紀錄。` : "確定刪除此動作？";
+      const ok = await showConfirm(msg, { title:"刪除動作", confirmText:"刪除", danger:true });
+      if(!ok) return;
       state.exercises = state.exercises.filter(x=>x.id!==id);
       state.logs = state.logs.filter(l=>l.exId!==id);
       afterExerciseChange();
@@ -599,17 +764,52 @@ function renderExManage(){
   });
 }
 
-/* ---------- 新增動作分類下拉選單 ---------- */
+function renderExManage(){
+  const box = document.getElementById("exManageList");
+  const eq = equipObj(manageEquip);
+  if(eq.grouped){
+    box.innerHTML = CATS.map(cat=>{
+      const list = state.exercises.filter(e=>e.cat===cat.id && e.equip===manageEquip);
+      const rows = list.length ? list.map(exRowHtml).join("") : `<div class="text-xs text-center py-3" style="color:var(--muted)">此分類尚無${eq.label}動作</div>`;
+      return `
+      <details class="rounded-2xl overflow-hidden" style="background:var(--card2);border:1px solid var(--line)">
+        <summary class="flex items-center justify-between p-3.5 cursor-pointer">
+          <span class="text-sm font-bold flex items-center gap-1.5">${catIcon(cat)}${cat.label}</span>
+          <span class="text-xs flex items-center gap-1" style="color:var(--muted)">${list.length} 個動作 <span class="chev">▾</span></span>
+        </summary>
+        <div class="px-3.5 pb-3.5 space-y-2" style="border-top:1px solid var(--line)">
+          <div class="pt-2 space-y-2">${rows}</div>
+        </div>
+      </details>`;
+    }).join("");
+  } else {
+    const list = state.exercises.filter(e=>e.equip===manageEquip);
+    box.innerHTML = list.length
+      ? `<div class="space-y-2">${list.map(exRowHtml).join("")}</div>`
+      : `<div class="text-xs text-center py-4 rounded-2xl" style="background:var(--card2);border:1px dashed var(--line);color:var(--muted)">此器材尚無動作</div>`;
+  }
+  bindExManageRowEvents(box);
+}
+
+/* ---------- 新增動作下拉選單 ---------- */
+document.getElementById("newExEquip").innerHTML = EQUIPS.map(e=>`<option value="${e.id}">${e.label}</option>`).join("");
 document.getElementById("newExCat").innerHTML = CATS.map(c=>`<option value="${c.id}">${c.label}</option>`).join("");
 
+function updateNewExCatVisibility(){
+  const eq = equipObj(document.getElementById("newExEquip").value);
+  document.getElementById("newExCatWrap").style.display = eq.grouped ? "" : "none";
+}
+document.getElementById("newExEquip").addEventListener("change", updateNewExCatVisibility);
+updateNewExCatVisibility();
+
 /* ---------- 新增紀錄 ---------- */
-document.getElementById("btnAdd").addEventListener("click", ()=>{
-  if(!selectedExId){ alert("請先選擇（或到管理新增）訓練動作"); return; }
+document.getElementById("btnAdd").addEventListener("click", async ()=>{
+  if(!selectedExId){ await showAlert("請先選擇（或到管理新增）訓練動作"); return; }
   const weight = parseFloat(document.getElementById("inWeight").value);
   const reps = parseInt(document.getElementById("inReps").value,10);
   const sets = parseInt(document.getElementById("inSets").value,10);
   const date = document.getElementById("logDate").value || todayStr();
-  if(!(weight>=0) || !(reps>0) || !(sets>0)){ alert("請確認重量、次數、組數為有效數字"); return; }
+  if(!(weight>=0) || !(reps>0) || !(sets>0)){ await showAlert("請確認重量、次數、組數為有效數字"); return; }
   state.logs.push({
     id: uid(), date, exId: selectedExId,
     weight, reps, sets,
@@ -638,23 +838,30 @@ document.getElementById("inWeight").addEventListener("input", renderPlateCalc);
 document.getElementById("logDate").addEventListener("change", renderTodayList);
 
 /* ---------- 管理：新增動作 ---------- */
-document.getElementById("btnAddEx").addEventListener("click", ()=>{
+document.getElementById("btnAddEx").addEventListener("click", async ()=>{
   const nameEl = document.getElementById("newExName");
   const catEl = document.getElementById("newExCat");
+  const equipEl = document.getElementById("newExEquip");
   const name = nameEl.value.trim();
   if(!name) return;
-  if(state.exercises.some(e=>e.name===name)){ alert("已有同名動作"); return; }
-  state.exercises.push({ id: uid(), name, cat: catEl.value });
+  if(state.exercises.some(e=>e.name===name)){ await showAlert("已有同名動作"); return; }
+  const eq = equipObj(equipEl.value);
+  const cat = eq.grouped ? catEl.value : CATS[0].id;
+  state.exercises.push({ id: uid(), name, cat, equip: equipEl.value });
   nameEl.value = "";
   afterExerciseChange();
 });
 
-/* ---------- 動作庫批次合併（Excel／JSON 共用；只新增或更新分類，不刪除） ---------- */
+/* ---------- 動作庫批次合併（Excel／JSON 共用；只新增或更新，不刪除） ---------- */
 function normalizeCat(catRaw){
   const found = CATS.find(c=>c.id===catRaw || c.label===String(catRaw||"").trim());
   return found ? found.id : null;
 }
-function mergeExercisesWithPreview(list, sourceLabel){
+function normalizeEquip(equipRaw){
+  const found = EQUIPS.find(eq=>eq.id===equipRaw || eq.label===String(equipRaw||"").trim());
+  return found ? found.id : null;
+}
+async function mergeExercisesWithPreview(list, sourceLabel){
   const toAdd = [];
   const toUpdate = [];
   const seen = new Set();
@@ -662,48 +869,61 @@ function mergeExercisesWithPreview(list, sourceLabel){
     const name = String((item && item.name) || "").trim();
     if(!name || seen.has(name)) return;
     seen.add(name);
-    const cat = normalizeCat(item.cat) || CATS[0].id;
+    const equip = normalizeEquip(item.equip) || EQUIPS[0].id;
+    const eq = equipObj(equip);
+    const cat = eq.grouped ? (normalizeCat(item.cat) || CATS[0].id) : CATS[0].id;
     const existing = state.exercises.find(e=>e.name===name);
     if(existing){
-      if(existing.cat !== cat) toUpdate.push({ existing, cat });
+      if(existing.cat !== cat || existing.equip !== equip) toUpdate.push({ existing, cat, equip });
     } else {
-      toAdd.push({ name, cat });
+      toAdd.push({ name, cat, equip });
     }
   });
   if(!toAdd.length && !toUpdate.length){
-    alert(`${sourceLabel}中沒有可新增或更新的動作（可能都已存在且分類相同）`);
+    await showAlert(`${sourceLabel}中沒有可新增或更新的動作（可能都已存在且設定相同）`);
     return;
   }
   const lines = [];
   if(toAdd.length) lines.push(`新增 ${toAdd.length} 個動作：${toAdd.map(x=>x.name).join("、")}`);
-  if(toUpdate.length) lines.push(`更新 ${toUpdate.length} 個動作的分類：${toUpdate.map(x=>x.existing.name).join("、")}`);
-  const ok = confirm(`來自${sourceLabel}的匯入預覽：\n\n${lines.join("\n")}\n\n不會刪除任何現有動作，確定套用？`);
+  if(toUpdate.length) lines.push(`更新 ${toUpdate.length} 個動作的分類／器材：${toUpdate.map(x=>x.existing.name).join("、")}`);
+  const ok = await showConfirm(`${lines.join("\n")}\n\n不會刪除任何現有動作，確定套用？`, { title:`來自${sourceLabel}的匯入預覽`, confirmText:"套用" });
   if(!ok) return;
-  toAdd.forEach(x=> state.exercises.push({ id: uid(), name:x.name, cat:x.cat }));
-  toUpdate.forEach(x=> x.existing.cat = x.cat);
+  toAdd.forEach(x=> state.exercises.push({ id: uid(), name:x.name, cat:x.cat, equip:x.equip }));
+  toUpdate.forEach(x=>{ x.existing.cat = x.cat; x.existing.equip = x.equip; });
   afterExerciseChange();
-  alert(`匯入完成：新增 ${toAdd.length} 個、更新 ${toUpdate.length} 個`);
+  await showAlert(`新增 ${toAdd.length} 個、更新 ${toUpdate.length} 個`, "匯入完成");
 }
 
-/* ---------- 批次新增：Excel 範本下載／上傳 ---------- */
+/* ---------- 批次新增：Excel 範本下載／上傳（四張工作表） ---------- */
 document.getElementById("btnDownloadExcel").addEventListener("click", ()=>{
-  const cols = CATS.map(cat => state.exercises.filter(e=>e.cat===cat.id).map(e=>e.name));
-  const maxLen = Math.max(...cols.map(c=>c.length), 1);
-  const headers = CATS.map(c=>c.label);
-  const rows = [headers];
-  for(let i=0;i<maxLen;i++){
-    rows.push(CATS.map((c,idx)=> cols[idx][i] || ""));
-  }
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = CATS.map(()=>({ wch:16 }));
+  const wb = XLSX.utils.book_new();
+  EQUIPS.forEach(eq=>{
+    if(eq.grouped){
+      const cols = CATS.map(cat => state.exercises.filter(e=>e.equip===eq.id && e.cat===cat.id).map(e=>e.name));
+      const maxLen = Math.max(...cols.map(c=>c.length), 1);
+      const headers = CATS.map(c=>c.label);
+      const rows = [headers];
+      for(let i=0;i<maxLen;i++){
+        rows.push(CATS.map((c,idx)=> cols[idx][i] || ""));
+      }
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = CATS.map(()=>({ wch:16 }));
+      XLSX.utils.book_append_sheet(wb, ws, eq.label);
+    } else {
+      const names = state.exercises.filter(e=>e.equip===eq.id).map(e=>e.name);
+      const rows = [["動作名稱"], ...names.map(n=>[n])];
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [{ wch:24 }];
+      XLSX.utils.book_append_sheet(wb, ws, eq.label);
+    }
+  });
   const noteWs = XLSX.utils.aoa_to_sheet([
     ["使用說明"],
-    ["1. 在對應分類欄位下方新增一列，填入動作名稱即可（可整欄貼上多筆）"],
-    ["2. 同一個動作名稱重複上傳只會更新分類，不會產生重複，也不會刪除其他動作"],
-    ["3. 存檔後，回到「鐵量日誌」App → 管理 → 批次新增（Excel）→ 上傳 Excel"]
+    ["1.「槓鈴」「啞鈴」工作表依分類欄位（上肢推／上肢拉／下肢推／下肢拉）填入動作名稱"],
+    ["2.「爆發動作」「壺鈴」工作表只有一欄，直接列出動作名稱即可，不需分類"],
+    ["3. 同一個動作名稱重複上傳只會更新設定，不會產生重複，也不會刪除其他動作"],
+    ["4. 存檔後，回到「鐵量日誌」App → 管理 → 批次新增（Excel）→ 上傳 Excel"]
   ]);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "動作清單");
   XLSX.utils.book_append_sheet(wb, noteWs, "使用說明");
   XLSX.writeFile(wb, "iron-log-exercises-"+todayStr()+".xlsx");
 });
@@ -712,26 +932,36 @@ document.getElementById("importExcelFile").addEventListener("change", e=>{
   const file = e.target.files[0];
   if(!file) return;
   const reader = new FileReader();
-  reader.onload = evt=>{
+  reader.onload = async evt=>{
     try{
       const wb = XLSX.read(evt.target.result, {type:"array"});
-      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, defval:""});
-      if(!rows.length) throw new Error("空白檔案");
-      const headers = rows[0].map(h=>String(h||"").trim());
-      const colCat = headers.map(h=> normalizeCat(h));
-      if(colCat.every(c=>!c)) throw new Error("找不到分類欄位標題");
       const list = [];
-      for(let r=1;r<rows.length;r++){
-        const row = rows[r];
-        colCat.forEach((cat, idx)=>{
-          if(!cat) return;
-          const val = String(row[idx]||"").trim();
-          if(val) list.push({ name: val, cat });
-        });
-      }
-      if(!list.length){ alert("Excel 中沒有讀到任何動作名稱"); return; }
-      mergeExercisesWithPreview(list, "Excel");
-    }catch(err){ alert("匯入失敗，請確認上傳的是本工具下載的 Excel 範本格式"); }
+      wb.SheetNames.forEach(sheetName=>{
+        const eq = EQUIPS.find(x=>x.label===String(sheetName||"").trim());
+        if(!eq) return;
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:""});
+        if(!rows.length) return;
+        if(eq.grouped){
+          const headers = rows[0].map(h=>String(h||"").trim());
+          const colCat = headers.map(h=> normalizeCat(h));
+          for(let r=1;r<rows.length;r++){
+            const row = rows[r];
+            colCat.forEach((cat, idx)=>{
+              if(!cat) return;
+              const val = String(row[idx]||"").trim();
+              if(val) list.push({ name: val, cat, equip: eq.id });
+            });
+          }
+        } else {
+          for(let r=1;r<rows.length;r++){
+            const val = String((rows[r] && rows[r][0]) || "").trim();
+            if(val) list.push({ name: val, cat: CATS[0].id, equip: eq.id });
+          }
+        }
+      });
+      if(!list.length) throw new Error("找不到可用資料");
+      await mergeExercisesWithPreview(list, "Excel");
+    }catch(err){ await showAlert("匯入失敗，請確認上傳的是本工具下載的 Excel 範本格式"); }
     e.target.value = "";
   };
   reader.readAsArrayBuffer(file);
@@ -739,7 +969,7 @@ document.getElementById("importExcelFile").addEventListener("change", e=>{
 
 /* ---------- 動作庫同步：JSON 下載／上傳 ---------- */
 document.getElementById("btnExportExercises").addEventListener("click", ()=>{
-  const list = state.exercises.map(e=>({ name: e.name, cat: e.cat }));
+  const list = state.exercises.map(e=>({ name: e.name, cat: e.cat, equip: e.equip }));
   const blob = new Blob([JSON.stringify(list,null,2)], {type:"application/json"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -751,12 +981,12 @@ document.getElementById("importExerciseJsonFile").addEventListener("change", e=>
   const file = e.target.files[0];
   if(!file) return;
   const reader = new FileReader();
-  reader.onload = evt=>{
+  reader.onload = async evt=>{
     try{
       const list = JSON.parse(evt.target.result);
       if(!Array.isArray(list)) throw new Error("格式不符");
-      mergeExercisesWithPreview(list, "JSON 檔");
-    }catch(err){ alert("匯入失敗：JSON 格式不正確，請確認上傳的是動作庫 JSON（不是完整備份檔）"); }
+      await mergeExercisesWithPreview(list, "JSON 檔");
+    }catch(err){ await showAlert("匯入失敗：JSON 格式不正確，請確認上傳的是動作庫 JSON（不是完整備份檔）"); }
     e.target.value = "";
   };
   reader.readAsText(file);
@@ -775,24 +1005,30 @@ document.getElementById("importFile").addEventListener("change", e=>{
   const file = e.target.files[0];
   if(!file) return;
   const reader = new FileReader();
-  reader.onload = evt=>{
+  reader.onload = async evt=>{
     try{
       const data = JSON.parse(evt.target.result);
       if(!data.exercises || !data.logs) throw new Error("格式不符");
-      if(!confirm(`匯入將取代現有資料（動作 ${data.exercises.length} 個、紀錄 ${data.logs.length} 筆）。確定？`)) return;
+      const ok = await showConfirm(`匯入將取代現有資料（動作 ${data.exercises.length} 個、紀錄 ${data.logs.length} 筆）。`, { title:"匯入完整備份", confirmText:"取代", danger:true });
+      if(!ok) return;
       const validCats = CATS.map(c=>c.id);
-      data.exercises.forEach(e=>{ if(!validCats.includes(e.cat)) e.cat = CATS[0].id; });
+      const validEquips = EQUIPS.map(e=>e.id);
+      data.exercises.forEach(e=>{
+        if(!validCats.includes(e.cat)) e.cat = CATS[0].id;
+        if(!validEquips.includes(e.equip)) e.equip = EQUIPS[0].id;
+      });
       state = data;
       selectedExId = state.exercises.length ? state.exercises[0].id : null;
       afterBulkChange();
-      alert("匯入完成 ✓");
-    }catch(err){ alert("匯入失敗：檔案格式不正確"); }
+      await showAlert("匯入完成 ✓");
+    }catch(err){ await showAlert("匯入失敗：檔案格式不正確"); }
     e.target.value = "";
   };
   reader.readAsText(file);
 });
-document.getElementById("btnWipe").addEventListener("click", ()=>{
-  if(!confirm("確定清除全部資料？此動作無法復原（建議先匯出備份）。")) return;
+document.getElementById("btnWipe").addEventListener("click", async ()=>{
+  const ok = await showConfirm("此動作無法復原（建議先匯出備份）。", { title:"確定清除全部資料？", confirmText:"清除", danger:true });
+  if(!ok) return;
   state = getDefaultState();
   selectedExId = state.exercises[0].id;
   afterBulkChange();
@@ -802,10 +1038,10 @@ document.getElementById("btnWipe").addEventListener("click", ()=>{
 function switchTab(tab){
   const panel = document.getElementById("tab-"+tab);
   if(!panel) return;
-  if(tab==="log"){ renderExPicker(); renderTodayList(); renderPlateCalc(); }
+  if(tab==="log"){ renderEquipToggle(); renderExPicker(); renderTodayList(); renderPlateCalc(); }
   if(tab==="history") renderHistory();
   if(tab==="stats") renderStats();
-  if(tab==="manage") renderExManage();
+  if(tab==="manage"){ renderManageEquipToggle(); renderExManage(); }
   document.querySelectorAll(".nav-btn").forEach(b=>b.classList.toggle("active", b.dataset.tab===tab));
   document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
   panel.classList.add("active");
@@ -819,6 +1055,7 @@ document.getElementById("goManageEx").addEventListener("click", ()=> switchTab("
 /* ---------- 初始化 ---------- */
 document.getElementById("logDate").value = todayStr();
 document.getElementById("hdrDate").textContent = fmtDate(todayStr());
+renderEquipToggle();
 renderExPicker();
 renderTodayList();
 renderPlateCalc();
