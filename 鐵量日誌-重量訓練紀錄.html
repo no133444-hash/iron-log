@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" class="[scrollbar-gutter:stable]" style="background:#F2F4F1">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#F2F4F1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>鐵量日誌 IRON LOG</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;900&family=Work+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F2F4F1; --card:#FFFFFF; --card2:#EAEDE8; --line:#DCE2DB;
+    --ink:#262B28; --muted:#737F76; --accent:#4F7A6E; --accent-soft:#E3ECE8;
+    --gold:#B8935B; --gold-soft:#F3EADA; --danger:#B5695F; --danger-soft:#F5E9E7;
+  }
+  html{ background:var(--bg); }
+  body{
+    font-family:'Work Sans','Noto Sans TC',sans-serif; background:var(--bg); color:var(--ink);
+    -webkit-tap-highlight-color:transparent;
+    background-image:
+      radial-gradient(ellipse 600px 300px at 50% -5%, rgba(79,122,110,.06), transparent 60%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/></svg>");
+  }
+  .num{ font-family:'Big Shoulders Display','Work Sans','Noto Sans TC',sans-serif; font-variant-numeric:tabular-nums; }
+  .display{ font-family:'Big Shoulders Display','Noto Sans TC',sans-serif; letter-spacing:.01em; }
+  .tab-panel{ display:none; }
+  .tab-panel.active{ display:block; }
+  .nav-btn{ color:var(--muted); transition:color .15s; }
+  .nav-btn.active{ color:var(--accent); }
+  .nav-btn.active .nav-bar{ opacity:1; }
+  .nav-bar{ opacity:0; transition:opacity .15s; }
+  .ex-btn{ background:var(--card); border:1px solid var(--line); color:var(--ink); }
+  .ex-btn.active{ background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700; }
+  .equip-btn{ background:var(--card2); border:1px solid var(--line); color:var(--ink); transition:background .12s,color .12s; }
+  .equip-btn.active{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  input,select,textarea{ background:var(--card2); border:1px solid var(--line); color:var(--ink);
+    border-radius:.75rem; outline:none; }
+  input:focus,select:focus{ border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  input[type="date"]{ color-scheme:light; }
+  summary{ list-style:none; }
+  summary::-webkit-details-marker{ display:none; }
+  summary::marker{ content:""; }
+  .chev{ display:inline-block; transition:transform .15s ease; color:var(--muted); }
+  details[open] > summary .chev{ transform:rotate(180deg); }
+  .stepper{ background:var(--card2); border:1px solid var(--line); color:var(--ink); user-select:none;
+    -webkit-user-select:none; touch-action:manipulation; }
+  .stepper:active{ background:var(--line); }
+  .plate{ display:inline-flex; align-items:center; justify-content:center;
+    border-radius:9999px; font-family:'Big Shoulders Display',sans-serif; font-weight:700;
+    border:2px solid rgba(38,43,40,.08); }
+  .cat-icon{ color:var(--accent); }
+  .fadein{ animation:fi .25s ease; }
+  @keyframes fi{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
+  @media (prefers-reduced-motion:reduce){ .fadein{ animation:none; } .chev{ transition:none; } }
+  ::-webkit-scrollbar{ width:0; height:0; }
+  .sync-pill{ display:inline-flex; align-items:center; gap:3px; font-size:10px; font-weight:600;
+    padding:2px 8px; border-radius:9999px; white-space:nowrap; transition:background .2s,color .2s; }
+</style>
+</head>
+<body class="min-h-screen">
+<div class="max-w-md mx-auto px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-28">
+
+  <!-- Header -->
+  <header class="flex items-end justify-between mb-4">
+    <div>
+      <div class="display text-[10px] tracking-[0.35em] font-bold" style="color:var(--accent)">IRON LOG</div>
+      <h1 class="display text-2xl font-black tracking-wide">鐵量日誌</h1>
+    </div>
+    <div class="text-right">
+      <div class="text-[10px]" style="color:var(--muted)">今日</div>
+      <div id="hdrDate" class="num text-sm font-bold"></div>
+      <div id="syncPill" class="sync-pill mt-1" style="background:var(--card2);color:var(--muted)">⚠️ 離線 / 未同步</div>
+    </div>
+  </header>
+
+  <!-- ============ Tab: 記錄 ============ -->
+  <div id="tab-log" class="tab-panel active">
+
+    <div class="rounded-2xl p-4 mb-4" style="background:var(--card);border:1px solid var(--line)">
+      <label class="text-xs font-medium" style="color:var(--muted)">訓練日期</label>
+      <input id="logDate" type="date" class="w-full mt-1 px-3 py-3 text-base num font-bold">
+
+      <div class="mt-4">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-medium" style="color:var(--muted)">訓練動作</label>
+          <button id="goManageEx" class="text-xs font-medium" style="color:var(--accent)">管理動作 ›</button>
+        </div>
+        <div id="selectedExDisplay" class="text-sm font-bold mt-1.5 mb-2"></div>
+        <div id="equipToggle" class="grid grid-cols-2 gap-2 mb-2"></div>
+        <div id="exPicker" class="space-y-2"></div>
+      </div>
+
+      <!-- 重量 -->
+      <div class="mt-5">
+        <label class="text-xs font-medium" style="color:var(--muted)">重量 (kg)</label>
+        <div class="flex items-stretch gap-2 mt-1">
+          <button class="stepper rounded-xl w-14 text-xl font-bold num" data-step="w" data-delta="-2.5">−</button>
+          <input id="inWeight" type="text" inputmode="decimal" class="flex-1 text-center num text-3xl font-black py-2" value="60">
+          <button class="stepper rounded-xl w-14 text-xl font-bold num" data-step="w" data-delta="2.5">＋</button>
+        </div>
+        <div class="flex flex-wrap gap-1.5 mt-2">
+          <button class="stepper rounded-lg px-2.5 py-1 text-xs num" data-step="w" data-delta="-10">−10</button>
+          <button class="stepper rounded-lg px-2.5 py-1 text-xs num" data-step="w" data-delta="-5">−5</button>
+          <button class="stepper rounded-lg px-2.5 py-1 text-xs num" data-step="w" data-delta="-2.5">−2.5</button>
+          <button class="stepper rounded-lg px-2.5 py-1 text-xs num" data-step="w" data-delta="2.5">＋2.5</button>
+          <button class="stepper rounded-lg px-2.5 py-1 text-xs num" data-step="w" data-delta="5">＋5</button>
+          <button class="stepper rounded-lg px-2.5 py-1 text-xs num" data-step="w" data-delta="10">＋10</button>
+        </div>
+      </div>
+
+      <!-- 槓片配置（招牌功能） -->
+      <details class="mt-3">
+        <summary class="flex items-center justify-between py-2 cursor-pointer">
+          <span class="text-xs font-medium" style="color:var(--muted)">🏋 槓片配置（單邊，槓 20kg）</span>
+          <span class="chev text-xs">▾</span>
+        </summary>
+        <div id="plateCalc" class="flex flex-wrap items-center gap-1.5 py-2"></div>
+      </details>
+
+      <!-- 次數 / 組數 -->
+      <div class="grid grid-cols-2 gap-3 mt-4">
+        <div>
+          <label class="text-xs font-medium" style="color:var(--muted)">次數 / 組</label>
+          <div class="flex items-stretch gap-1.5 mt-1">
+            <button class="stepper rounded-xl w-11 text-lg font-bold num" data-step="r" data-delta="-1">−</button>
+            <input id="inReps" type="text" inputmode="numeric" class="flex-1 min-w-0 text-center num text-xl font-black py-2" value="8">
+            <button class="stepper rounded-xl w-11 text-lg font-bold num" data-step="r" data-delta="1">＋</button>
+          </div>
+        </div>
+        <div>
+          <label class="text-xs font-medium" style="color:var(--muted)">組數</label>
+          <div class="flex items-stretch gap-1.5 mt-1">
+            <button class="stepper rounded-xl w-11 text-lg font-bold num" data-step="s" data-delta="-1">−</button>
+            <input id="inSets" type="text" inputmode="numeric" class="flex-1 min-w-0 text-center num text-xl font-black py-2" value="3">
+            <button class="stepper rounded-xl w-11 text-lg font-bold num" data-step="s" data-delta="1">＋</button>
+          </div>
+        </div>
+      </div>
+
+      <input id="inNote" type="text" class="w-full mt-4 px-3 py-2.5 text-sm" placeholder="備註（選填，例如：RPE 8、有補手）">
+
+      <button id="btnAdd" class="w-full mt-4 py-3.5 rounded-xl display font-black text-lg tracking-widest"
+        style="background:var(--accent);color:#fff">＋ 記錄這一筆</button>
+    </div>
+
+    <!-- 當日已記錄 -->
+    <h2 class="display font-bold text-sm tracking-wider mb-2">訓練紀錄</h2>
+    <div id="todayList" class="space-y-2"></div>
+  </div>
+
+  <!-- ============ Tab: 歷史 ============ -->
+  <div id="tab-history" class="tab-panel">
+    <h2 class="display font-bold text-sm tracking-wider mb-3">訓練歷史</h2>
+    <div id="historyList" class="space-y-2"></div>
+  </div>
+
+  <!-- ============ Tab: 統計 ============ -->
+  <div id="tab-stats" class="tab-panel">
+    <h2 class="display font-bold text-sm tracking-wider mb-3">近 8 週訓練量 (kg)</h2>
+    <div class="rounded-2xl p-4 mb-5" style="background:var(--card);border:1px solid var(--line)">
+      <div id="weeklyChart"></div>
+    </div>
+    <h2 class="display font-bold text-sm tracking-wider mb-3">各動作最佳紀錄</h2>
+    <div id="prList" class="space-y-2"></div>
+  </div>
+
+  <!-- ============ Tab: 管理 ============ -->
+  <div id="tab-manage" class="tab-panel">
+    <h2 class="display font-bold text-sm tracking-wider mb-3">新增動作</h2>
+    <div class="rounded-2xl p-4 mb-5" style="background:var(--card);border:1px solid var(--line)">
+      <label class="text-xs font-medium" style="color:var(--muted)">器材</label>
+      <select id="newExEquip" class="w-full mt-1 px-3 py-2.5 text-sm"></select>
+
+      <div id="newExCatWrap" class="mt-3">
+        <label class="text-xs font-medium" style="color:var(--muted)">分類</label>
+        <select id="newExCat" class="w-full mt-1 px-3 py-2.5 text-sm"></select>
+      </div>
+
+      <label class="text-xs font-medium mt-3 block" style="color:var(--muted)">動作名稱</label>
+      <input id="newExName" type="text" class="w-full mt-1 px-3 py-2.5 text-sm" placeholder="例如：波比跳">
+      <button id="btnAddEx" class="w-full mt-2.5 py-2.5 rounded-xl font-bold text-sm" style="background:var(--accent);color:#fff">＋ 新增動作</button>
+    </div>
+
+    <h2 class="display font-bold text-sm tracking-wider mb-3">☁️ 雲端同步設定（PC/手機雙向同步）</h2>
+    <div class="rounded-2xl p-4 mb-5 space-y-3" style="background:var(--card);border:1px solid var(--line)">
+      <p class="text-xs leading-relaxed" style="color:var(--muted)">設定一次後，電腦與手機開啟本頁面會自動雙向同步最新的訓練紀錄與動作庫（以最後更新時間較新者為準）。</p>
+      <div>
+        <label class="text-xs font-medium" style="color:var(--muted)">GAS 網址 (URL)</label>
+        <input id="gasUrlInput" type="text" inputmode="url" class="w-full mt-1 px-3 py-2.5 text-sm" placeholder="https://script.google.com/macros/s/.../exec">
+      </div>
+      <div>
+        <label class="text-xs font-medium" style="color:var(--muted)">專案密碼 (Secret)</label>
+        <input id="gasSecretInput" type="password" class="w-full mt-1 px-3 py-2.5 text-sm" placeholder="與 GAS 端 SECRET_TOKEN 相同">
+      </div>
+      <div class="flex gap-2">
+        <button id="btnSaveGasConfig" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--card2);border:1px solid var(--line)">💾 儲存連線設定</button>
+        <button id="btnManualSync" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--accent);color:#fff">🔄 立即手動同步</button>
+      </div>
+      <div id="syncStatusText" class="text-xs text-center pt-1" style="color:var(--muted)">尚未設定連線</div>
+    </div>
+
+    <h2 class="display font-bold text-sm tracking-wider mb-3">動作庫同步（JSON）</h2>
+    <div class="rounded-2xl p-4 mb-5" style="background:var(--card);border:1px solid var(--line)">
+      <p class="text-xs leading-relaxed mb-3" style="color:var(--muted)">在電腦用「動作庫管理（桌面版）」整理好動作後下載 JSON，這裡上傳即可同步到手機；也可以先把手機的動作庫下載成 JSON，帶到電腦繼續編輯。同樣只新增或更新，不會刪除。</p>
+      <div class="flex gap-2">
+        <button id="btnExportExercises" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--card2);border:1px solid var(--line)">⬇ 下載動作庫 JSON</button>
+        <label class="flex-1 py-2.5 rounded-xl text-sm font-bold text-center cursor-pointer" style="background:var(--card2);border:1px solid var(--line)">
+          ⬆ 上傳動作庫 JSON<input id="importExerciseJsonFile" type="file" accept=".json" class="hidden">
+        </label>
+      </div>
+    </div>
+
+    <h2 class="display font-bold text-sm tracking-wider mb-3">動作分類管理</h2>
+    <div id="manageEquipToggle" class="grid grid-cols-2 gap-2 mb-3"></div>
+    <div id="exManageList" class="space-y-2 mb-8"></div>
+
+    <h2 class="display font-bold text-sm tracking-wider mb-3">完整資料備份（含訓練紀錄）</h2>
+    <div class="rounded-2xl p-4 space-y-3" style="background:var(--card);border:1px solid var(--line)">
+      <p class="text-xs leading-relaxed" style="color:var(--muted)">資料儲存在此瀏覽器的 LocalStorage。換手機或清除瀏覽資料前，請先匯出備份（含所有訓練紀錄，會整份取代，非新增）。</p>
+      <div class="flex gap-2">
+        <button id="btnExport" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--card2);border:1px solid var(--line)">⬇ 匯出 JSON</button>
+        <label class="flex-1 py-2.5 rounded-xl text-sm font-bold text-center cursor-pointer" style="background:var(--card2);border:1px solid var(--line)">
+          ⬆ 匯入 JSON<input id="importFile" type="file" accept=".json" class="hidden">
+        </label>
+      </div>
+      <button id="btnWipe" class="w-full py-2.5 rounded-xl text-sm font-bold" style="background:var(--danger-soft);border:1px solid var(--danger);color:var(--danger)">清除全部資料</button>
+    </div>
+  </div>
+</div>
+
+<!-- 底部導覽列 -->
+<nav class="fixed bottom-0 left-0 right-0 z-30" style="background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-top:1px solid var(--line)">
+  <div class="max-w-md mx-auto grid grid-cols-4 pb-[env(safe-area-inset-bottom)]">
+    <button class="nav-btn active py-2.5 flex flex-col items-center gap-0.5" data-tab="log">
+      <span class="text-xl leading-none">✏️</span><span class="text-[10px] font-medium">記錄</span>
+      <span class="nav-bar h-0.5 w-6 rounded-full" style="background:var(--accent)"></span>
+    </button>
+    <button class="nav-btn py-2.5 flex flex-col items-center gap-0.5" data-tab="history">
+      <span class="text-xl leading-none">📅</span><span class="text-[10px] font-medium">歷史</span>
+      <span class="nav-bar h-0.5 w-6 rounded-full" style="background:var(--accent)"></span>
+    </button>
+    <button class="nav-btn py-2.5 flex flex-col items-center gap-0.5" data-tab="stats">
+      <span class="text-xl leading-none">📈</span><span class="text-[10px] font-medium">統計</span>
+      <span class="nav-bar h-0.5 w-6 rounded-full" style="background:var(--accent)"></span>
+    </button>
+    <button class="nav-btn py-2.5 flex flex-col items-center gap-0.5" data-tab="manage">
+      <span class="text-xl leading-none">⚙️</span><span class="text-[10px] font-medium">管理</span>
+      <span class="nav-bar h-0.5 w-6 rounded-full" style="background:var(--accent)"></span>
+    </button>
+  </div>
+</nav>
+
+<!-- 自訂對話框：取代 prompt/confirm/alert，避免在「加入主畫面」模式下失效 -->
+<div id="modalOverlay" class="fixed inset-0 z-50 hidden items-center justify-center p-5" style="background:rgba(38,43,40,.4)">
+  <div class="w-full max-w-sm rounded-2xl p-5" style="background:var(--card)">
+    <h3 id="modalTitle" class="font-bold text-base mb-1.5"></h3>
+    <p id="modalMessage" class="text-sm mb-3 whitespace-pre-line" style="color:var(--muted)"></p>
+    <input id="modalInput" type="text" class="w-full px-3 py-2.5 text-sm mb-3 hidden">
+    <div class="flex gap-2">
+      <button id="modalCancelBtn" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--card2);border:1px solid var(--line)">取消</button>
+      <button id="modalConfirmBtn" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--accent);color:#fff">確定</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const STORAGE_KEY = "ironLogData_v3";
+const LEGACY_KEYS = ["ironLogData_v2", "ironLogData_v1"];
+
+/* 器材：槓鈴／啞鈴需先選四大分類；爆發動作／壺鈴直接對應動作清單 */
+const EQUIPS = [
+  { id:"barbell",    label:"槓鈴",    grouped:true  },
+  { id:"dumbbell",   label:"啞鈴",    grouped:true  },
+  { id:"explosive",  label:"爆發動作", grouped:false },
+  { id:"kettlebell", label:"壺鈴",    grouped:false }
+];
+function equipIcon(eq){
+  if(eq.id === "barbell"){
+    return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="3" y1="12" x2="21" y2="12"/>
+      <line x1="3" y1="9" x2="3" y2="15"/>
+      <line x1="21" y1="9" x2="21" y2="15"/>
+      <line x1="6.5" y1="10" x2="6.5" y2="14"/>
+      <line x1="17.5" y1="10" x2="17.5" y2="14"/>
+    </svg>`;
+  }
+  if(eq.id === "dumbbell"){
+    return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="9" y1="12" x2="15" y2="12"/>
+      <circle cx="5" cy="12" r="3"/>
+      <circle cx="19" cy="12" r="3"/>
+    </svg>`;
+  }
+  if(eq.id === "kettlebell"){
+    return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8.5 10.5c0-3 1.6-6 3.5-6s3.5 3 3.5 6"/>
+      <circle cx="12" cy="15" r="6"/>
+    </svg>`;
+  }
+  return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M13 2 L6 14 H11 L10 22 L18 10 H13 Z"/>
+  </svg>`;
+}
+
+/* 動作分類：pos(上肢/下肢) + dir(推/拉) 系統化決定圖示畫法（僅槓鈴／啞鈴使用） */
+const CATS = [
+  { id:"upper_push", label:"上肢推", pos:"upper", dir:"push" },
+  { id:"upper_pull", label:"上肢拉", pos:"upper", dir:"pull" },
+  { id:"lower_push", label:"下肢推", pos:"lower", dir:"push" },
+  { id:"lower_pull", label:"下肢拉", pos:"lower", dir:"pull" }
+];
+function catIcon(cat){
+  const barY = cat.pos==="upper" ? 7 : 17;
+  const y1 = cat.pos==="upper" ? 15 : 9;
+  const y2 = cat.pos==="upper" ? 18 : 6;
+  const path = cat.dir==="push"
+    ? `M9 ${y1} L6 ${y2} M15 ${y1} L18 ${y2}`
+    : `M7 ${y1} L10 ${y2} M17 ${y1} L14 ${y2}`;
+  return `<svg class="cat-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="4" y1="${barY}" x2="20" y2="${barY}"/>
+    <line x1="4" y1="${barY-2.5}" x2="4" y2="${barY+2.5}"/>
+    <line x1="20" y1="${barY-2.5}" x2="20" y2="${barY+2.5}"/>
+    <path d="${path}"/>
+  </svg>`;
+}
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function escHtml(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+/* ---------- 自訂對話框（取代 prompt/confirm/alert） ----------
+   iOS「加入主畫面」的獨立模式下，原生 prompt() 常被靜默阻擋、confirm() 也不穩定，
+   改用畫面內的對話框，回傳 Promise：取消時 resolve(null)，確定時 resolve(輸入值或 true) */
+const modalOverlay = document.getElementById("modalOverlay");
+const modalTitle = document.getElementById("modalTitle");
+const modalMessage = document.getElementById("modalMessage");
+const modalInput = document.getElementById("modalInput");
+const modalCancelBtn = document.getElementById("modalCancelBtn");
+const modalConfirmBtn = document.getElementById("modalConfirmBtn");
+let modalResolve = null;
+
+function closeModal(result){
+  modalOverlay.classList.add("hidden");
+  modalOverlay.classList.remove("flex");
+  if(modalResolve){ modalResolve(result); modalResolve = null; }
+}
+modalOverlay.addEventListener("click", e=>{ if(e.target===modalOverlay) closeModal(null); });
+modalCancelBtn.addEventListener("click", ()=> closeModal(null));
+modalConfirmBtn.addEventListener("click", ()=>{
+  const usesInput = !modalInput.classList.contains("hidden");
+  closeModal(usesInput ? modalInput.value : true);
+});
+modalInput.addEventListener("keydown", e=>{ if(e.key==="Enter") modalConfirmBtn.click(); });
+
+function showModal({ title, message="", input=false, defaultValue="", confirmText="確定", cancelText="取消", danger=false, onlyOk=false }){
+  return new Promise(resolve=>{
+    modalResolve = resolve;
+    modalTitle.textContent = title;
+    modalMessage.textContent = message;
+    modalMessage.style.display = message ? "" : "none";
+    if(input){
+      modalInput.classList.remove("hidden");
+      modalInput.value = defaultValue;
+    } else {
+      modalInput.classList.add("hidden");
+    }
+    modalConfirmBtn.textContent = confirmText;
+    modalConfirmBtn.style.background = danger ? "var(--danger)" : "var(--accent)";
+    modalCancelBtn.style.display = onlyOk ? "none" : "";
+    modalCancelBtn.textContent = cancelText;
+    modalOverlay.classList.remove("hidden");
+    modalOverlay.classList.add("flex");
+    if(input) setTimeout(()=>{ modalInput.focus(); modalInput.select(); }, 50);
+  });
+}
+function showAlert(message, title=""){ return showModal({ title, message, onlyOk:true }); }
+function showConfirm(message, { title="", confirmText="確定", danger=false } = {}){
+  return showModal({ title, message, confirmText, danger });
+}
+function showPrompt(message, defaultValue="", { title="", confirmText="儲存" } = {}){
+  return showModal({ title, message, input:true, defaultValue, confirmText });
+}
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function fmtDate(iso){
+  const [y,m,d] = iso.split("-");
+  const wd = "日一二三四五六"[new Date(iso+"T00:00:00").getDay()];
+  return `${y}/${m}/${d}（${wd}）`;
+}
+function equipObj(id){ return EQUIPS.find(e=>e.id===id) || EQUIPS[0]; }
+
+function getDefaultState(){
+  const mk = (n,cat,equip) => ({ id: uid(), name:n, cat, equip });
+  return {
+    exercises: [
+      mk("槓鈴臥推","upper_push","barbell"),
+      mk("槓鈴划船","upper_pull","barbell"),
+      mk("深蹲","lower_push","barbell"),
+      mk("硬舉","lower_pull","barbell"),
+      mk("啞鈴臥推","upper_push","dumbbell"),
+      mk("啞鈴划船","upper_pull","dumbbell"),
+      mk("啞鈴保加利亞分腿蹲","lower_push","dumbbell"),
+      mk("啞鈴羅馬尼亞硬舉","lower_pull","dumbbell"),
+      mk("波比跳","upper_push","explosive"),
+      mk("壺鈴甩擺","lower_pull","kettlebell")
+    ],
+    logs: [], // {id, date:"YYYY-MM-DD", exId, weight, reps, sets, note}
+    updatedAt: Date.now()
+  };
+}
+
+function sanitizeState(s){
+  const validCats = CATS.map(c=>c.id);
+  const validEquips = EQUIPS.map(e=>e.id);
+  s.exercises.forEach(e=>{
+    if(!validCats.includes(e.cat)) e.cat = CATS[0].id;
+    if(!validEquips.includes(e.equip)) e.equip = EQUIPS[0].id;
+  });
+  if(typeof s.updatedAt !== "number") s.updatedAt = 0;
+  return s;
+}
+
+function loadData(){
+  let s = null;
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(raw){ try{ s = JSON.parse(raw); }catch(e){} }
+  if(!s || !s.exercises || !s.logs){
+    for(const key of LEGACY_KEYS){
+      const legacy = localStorage.getItem(key);
+      if(legacy){
+        try{ const parsed = JSON.parse(legacy); if(parsed && parsed.exercises && parsed.logs){ s = parsed; break; } }catch(e){}
+      }
+    }
+  }
+  if(!s || !s.exercises || !s.logs) s = getDefaultState();
+  return sanitizeState(s);
+}
+/* 純本地寫入，不更新時間戳、不觸發雲端推送（同步下載覆蓋本地時使用） */
+function persistLocal(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+/* 一般資料異動：更新時間戳、寫入本地、並在背景非同步推送到雲端 */
+function saveData(){
+  state.updatedAt = Date.now();
+  persistLocal();
+  schedulePush();
+}
+
+let state = loadData();
+let selectedExId = state.exercises.length ? state.exercises[0].id : null;
+let selectedEquip = EQUIPS[0].id;   // 紀錄頁的器材篩選
+let manageEquip = EQUIPS[0].id;     // 管理頁的器材篩選
+
+/* ---------- 通用 ---------- */
+function exName(id){ const e = state.exercises.find(x=>x.id===id); return e ? e.name : "（已刪除動作）"; }
+function volumeOf(l){ return (l.weight||0)*(l.reps||0)*(l.sets||0); }
+
+function afterLogChange(){
+  saveData();
+  renderTodayList();
+}
+function afterExerciseChange(){
+  saveData();
+  renderExPicker();
+  renderExManage();
+}
+function afterBulkChange(){
+  saveData();
+  rerenderAll();
+}
+/* 重繪所有畫面（本地異動與雲端下載覆蓋皆會呼叫） */
+function rerenderAll(){
+  renderEquipToggle();
+  renderExPicker();
+  renderTodayList();
+  renderHistory();
+  renderStats();
+  renderManageEquipToggle();
+  renderExManage();
+  renderPlateCalc();
+}
+
+/* ---------- 槓片計算 ---------- */
+const PLATES = [
+  {w:25,  c:"#C75A52", t:"#FFFFFF"},
+  {w:20,  c:"#4A6FA0", t:"#FFFFFF"},
+  {w:15,  c:"#D9AE55", t:"#2B2E2A"},
+  {w:10,  c:"#5A9A6C", t:"#FFFFFF"},
+  {w:5,   c:"#ECECE9", t:"#2B2E2A"},
+  {w:2.5, c:"#33383A", t:"#F5F6F4"},
+  {w:1.25,c:"#A8ADB3", t:"#2B2E2A"}
+];
+function renderPlateCalc(){
+  const box = document.getElementById("plateCalc");
+  const total = parseFloat(document.getElementById("inWeight").value) || 0;
+  const BAR = 20;
+  if(total < BAR){
+    box.innerHTML = `<span class="text-xs" style="color:var(--muted)">重量低於空槓 ${BAR}kg（或使用啞鈴／機械式）</span>`;
+    return;
+  }
+  let side = (total - BAR) / 2;
+  const used = [];
+  PLATES.forEach(p=>{ while(side >= p.w - 1e-9){ used.push(p); side -= p.w; } });
+  let html = `<span class="text-xs num mr-1" style="color:var(--muted)">槓20</span>`;
+  html += used.map(p=>{
+    const size = 30 + Math.round(p.w*0.9);
+    return `<span class="plate" style="width:${size}px;height:${size}px;background:${p.c};color:${p.t};font-size:${p.w>=10?11:9}px">${p.w}</span>`;
+  }).join("");
+  if(side > 0.01) html += `<span class="text-xs num ml-1" style="color:var(--danger)">餘 ${side.toFixed(2)}kg 無法配片</span>`;
+  if(!used.length) html += `<span class="text-xs" style="color:var(--muted)">空槓</span>`;
+  box.innerHTML = html;
+}
+
+/* ---------- 訓練動作選擇：先選器材；槓鈴／啞鈴再展開四大分類，其餘直接列出 ---------- */
+function updateSelectedExDisplay(){
+  const el = document.getElementById("selectedExDisplay");
+  if(!el) return;
+  if(!selectedExId){
+    el.innerHTML = `<span style="color:var(--muted)">尚未選擇動作，請先選器材再挑選</span>`;
+    return;
+  }
+  const ex = state.exercises.find(e=>e.id===selectedExId);
+  el.innerHTML = `已選動作：<span style="color:var(--accent)">${escHtml(exName(selectedExId))}</span>` +
+    (ex ? `<span class="text-xs font-normal" style="color:var(--muted)">〈${equipObj(ex.equip).label}〉</span>` : "");
+}
+
+function renderEquipToggle(){
+  const wrap = document.getElementById("equipToggle");
+  wrap.innerHTML = EQUIPS.map(eq=>`
+    <button class="equip-btn ${eq.id===selectedEquip?"active":""} flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm" data-equip="${eq.id}">${equipIcon(eq)}${eq.label}</button>
+  `).join("");
+  wrap.querySelectorAll("[data-equip]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      selectedEquip = btn.dataset.equip;
+      renderEquipToggle();
+      renderExPicker();
+    });
+  });
+}
+
+function bindExPickerButtons(wrap){
+  wrap.querySelectorAll("[data-expick]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      selectedExId = btn.dataset.expick;
+      wrap.querySelectorAll("[data-expick]").forEach(b=>{
+        b.classList.toggle("active", b.dataset.expick===selectedExId);
+      });
+      updateSelectedExDisplay();
+    });
+  });
+}
+
+function renderExPicker(){
+  const wrap = document.getElementById("exPicker");
+  if(!state.exercises.length){
+    wrap.innerHTML = `<div class="text-xs text-center py-4" style="color:var(--muted)">尚無動作，請先到「管理」新增</div>`;
+    selectedExId = null;
+    updateSelectedExDisplay();
+    return;
+  }
+  if(!state.exercises.find(e=>e.id===selectedExId)) selectedExId = state.exercises[0].id;
+
+  const eq = equipObj(selectedEquip);
+  if(eq.grouped){
+    wrap.innerHTML = CATS.map(cat=>{
+      const list = state.exercises.filter(e=>e.cat===cat.id && e.equip===selectedEquip);
+      const btns = list.length
+        ? list.map(e=>`<button class="ex-btn ${e.id===selectedExId?"active":""} text-sm px-3.5 py-2 rounded-xl" data-expick="${e.id}">${escHtml(e.name)}</button>`).join("")
+        : `<span class="text-xs" style="color:var(--muted)">此分類尚無${eq.label}動作</span>`;
+      return `
+      <details class="rounded-xl overflow-hidden" style="background:var(--card2);border:1px solid var(--line)">
+        <summary class="flex items-center justify-between px-3 py-2.5 cursor-pointer">
+          <span class="text-sm font-bold flex items-center gap-1.5">${catIcon(cat)}${cat.label}</span>
+          <span class="text-xs flex items-center gap-1" style="color:var(--muted)">${list.length} 個 <span class="chev">▾</span></span>
+        </summary>
+        <div class="flex flex-wrap gap-2 px-3 pb-3 pt-1">${btns}</div>
+      </details>`;
+    }).join("");
+  } else {
+    const list = state.exercises.filter(e=>e.equip===selectedEquip);
+    wrap.innerHTML = list.length
+      ? `<div class="flex flex-wrap gap-2 rounded-xl p-3" style="background:var(--card2);border:1px solid var(--line)">${list.map(e=>`<button class="ex-btn ${e.id===selectedExId?"active":""} text-sm px-3.5 py-2 rounded-xl" data-expick="${e.id}">${escHtml(e.name)}</button>`).join("")}</div>`
+      : `<div class="text-xs text-center py-4 rounded-xl" style="background:var(--card2);border:1px dashed var(--line);color:var(--muted)">尚無${eq.label}動作，請到「管理」新增</div>`;
+  }
+  bindExPickerButtons(wrap);
+  updateSelectedExDisplay();
+}
+
+/* ---------- 當日紀錄（以日期為單位收合，預設收合） ---------- */
+function renderTodayList(){
+  const date = document.getElementById("logDate").value || todayStr();
+  const logs = state.logs.filter(l=>l.date===date);
+  const box = document.getElementById("todayList");
+  if(!logs.length){
+    box.innerHTML = `<div class="rounded-2xl p-6 text-center text-sm" style="background:var(--card);border:1px dashed var(--line);color:var(--muted)">${fmtDate(date)} 還沒有紀錄，加一筆吧 💪</div>`;
+    return;
+  }
+  const vol = logs.reduce((a,l)=>a+volumeOf(l),0);
+  box.innerHTML = `
+  <details class="rounded-2xl overflow-hidden" style="background:var(--card);border:1px solid var(--line)">
+    <summary class="flex items-center justify-between p-3.5 cursor-pointer">
+      <div>
+        <div class="num font-bold text-sm">${fmtDate(date)}</div>
+        <div class="text-xs mt-0.5" style="color:var(--muted)">${logs.length} 筆紀錄</div>
+      </div>
+      <div class="text-right shrink-0 flex items-center gap-1.5">
+        <div>
+          <div class="num font-black" style="color:var(--accent)">${vol.toLocaleString()}</div>
+          <div class="text-[10px]" style="color:var(--muted)">kg 總量</div>
+        </div>
+        <span class="chev">▾</span>
+      </div>
+    </summary>
+    <div class="px-3.5 pb-3.5 space-y-2.5" style="border-top:1px solid var(--line)">
+      ${logs.map(l=>`
+        <div class="fadein flex items-center gap-3 pt-2.5">
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-sm">${escHtml(exName(l.exId))}</div>
+            <div class="num text-base font-black" style="color:var(--accent)">${l.weight}<span class="text-xs font-bold" style="color:var(--muted)"> kg × </span>${l.reps}<span class="text-xs font-bold" style="color:var(--muted)"> 次 × </span>${l.sets}<span class="text-xs font-bold" style="color:var(--muted)"> 組</span></div>
+            ${l.note?`<div class="text-xs mt-0.5 truncate" style="color:var(--muted)">${escHtml(l.note)}</div>`:""}
+          </div>
+          <div class="text-right shrink-0">
+            <div class="num text-xs" style="color:var(--muted)">${volumeOf(l).toLocaleString()} kg</div>
+            <button class="text-xs mt-1 px-2 py-1 rounded-lg" style="color:var(--danger);background:var(--danger-soft)" data-del="${l.id}">刪除</button>
+          </div>
+        </div>`).join("")}
+    </div>
+  </details>`;
+  box.querySelectorAll("[data-del]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      state.logs = state.logs.filter(x=>x.id!==btn.dataset.del);
+      afterLogChange();
+    });
+  });
+}
+
+/* ---------- 歷史（以日期為單位收合，預設收合） ---------- */
+function renderHistory(){
+  const box = document.getElementById("historyList");
+  if(!state.logs.length){
+    box.innerHTML = `<div class="rounded-2xl p-6 text-center text-sm" style="background:var(--card);border:1px dashed var(--line);color:var(--muted)">尚無任何訓練紀錄</div>`;
+    return;
+  }
+  const byDate = {};
+  state.logs.forEach(l=>{ (byDate[l.date] = byDate[l.date] || []).push(l); });
+  const dates = Object.keys(byDate).sort().reverse();
+  box.innerHTML = dates.map(d=>{
+    const logs = byDate[d];
+    const vol = logs.reduce((a,l)=>a+volumeOf(l),0);
+    const exSet = [...new Set(logs.map(l=>exName(l.exId)))];
+    return `
+    <details class="rounded-2xl overflow-hidden" style="background:var(--card);border:1px solid var(--line)">
+      <summary class="flex items-center justify-between p-3.5 cursor-pointer">
+        <div>
+          <div class="num font-bold text-sm">${fmtDate(d)}</div>
+          <div class="text-xs mt-0.5 truncate max-w-[200px]" style="color:var(--muted)">${escHtml(exSet.join("、"))}</div>
+        </div>
+        <div class="text-right shrink-0 flex items-center gap-1.5">
+          <div>
+            <div class="num font-black" style="color:var(--accent)">${vol.toLocaleString()}</div>
+            <div class="text-[10px]" style="color:var(--muted)">kg 總量・${logs.length} 筆</div>
+          </div>
+          <span class="chev">▾</span>
+        </div>
+      </summary>
+      <div class="px-3.5 pb-3.5 space-y-1.5" style="border-top:1px solid var(--line)">
+        ${logs.map(l=>`
+          <div class="flex items-center justify-between pt-2 text-sm">
+            <span class="font-medium">${escHtml(exName(l.exId))}${l.note?`<span class="text-xs ml-1" style="color:var(--muted)">${escHtml(l.note)}</span>`:""}</span>
+            <span class="num font-bold">${l.weight}kg × ${l.reps} × ${l.sets}</span>
+          </div>`).join("")}
+      </div>
+    </details>`;
+  }).join("");
+}
+
+/* ---------- 統計 ---------- */
+function epley1RM(w,r){ return r<=1 ? w : w*(1+r/30); }
+
+function renderStats(){
+  const chart = document.getElementById("weeklyChart");
+  const now = new Date(); now.setHours(0,0,0,0);
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((now.getDay()+6)%7));
+  const weeks = [];
+  for(let i=7;i>=0;i--){
+    const start = new Date(monday); start.setDate(monday.getDate()-i*7);
+    const end = new Date(start); end.setDate(start.getDate()+6);
+    const s = start.toISOString().slice(0,10), e = end.toISOString().slice(0,10);
+    const vol = state.logs.filter(l=>l.date>=s && l.date<=e).reduce((a,l)=>a+volumeOf(l),0);
+    weeks.push({ label:(start.getMonth()+1)+"/"+start.getDate(), vol });
+  }
+  const max = Math.max(...weeks.map(w=>w.vol), 1);
+  const W=320, H=150, pad=4, bw=W/8;
+  let bars = "";
+  weeks.forEach((w,idx)=>{
+    const h = Math.round((w.vol/max)*(H-30));
+    const x = idx*bw+pad, y = H-20-h;
+    bars += `<rect x="${x}" y="${y}" width="${bw-pad*2}" height="${Math.max(h,2)}" rx="4" fill="${idx===7?"#B8935B":"#CBD5CE"}"/>`;
+    if(w.vol>0) bars += `<text x="${x+(bw-pad*2)/2}" y="${y-5}" text-anchor="middle" font-size="8.5" fill="#737F76" font-family="Big Shoulders Display">${w.vol>=1000?(w.vol/1000).toFixed(1)+"k":w.vol}</text>`;
+    bars += `<text x="${x+(bw-pad*2)/2}" y="${H-6}" text-anchor="middle" font-size="8.5" fill="#737F76" font-family="Big Shoulders Display">${w.label}</text>`;
+  });
+  chart.innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="w-full">${bars}</svg>`;
+
+  const box = document.getElementById("prList");
+  const rows = state.exercises.map(e=>{
+    const logs = state.logs.filter(l=>l.exId===e.id);
+    if(!logs.length) return null;
+    const maxW = logs.reduce((a,l)=>Math.max(a,l.weight),0);
+    const best = logs.reduce((a,l)=> epley1RM(l.weight,l.reps) > epley1RM(a.weight,a.reps) ? l : a, logs[0]);
+    const last = logs.slice().sort((a,b)=>a.date<b.date?1:-1)[0];
+    return { name:e.name, maxW, e1rm:epley1RM(best.weight,best.reps), n:logs.length, lastDate:last.date };
+  }).filter(Boolean).sort((a,b)=>b.maxW-a.maxW);
+  if(!rows.length){
+    box.innerHTML = `<div class="rounded-2xl p-6 text-center text-sm" style="background:var(--card);border:1px dashed var(--line);color:var(--muted)">累積紀錄後這裡會顯示各動作最佳表現</div>`;
+    return;
+  }
+  box.innerHTML = rows.map(r=>`
+    <div class="rounded-2xl p-3.5 flex items-center justify-between" style="background:var(--card);border:1px solid var(--line)">
+      <div>
+        <div class="font-bold text-sm">${escHtml(r.name)}</div>
+        <div class="text-xs mt-0.5" style="color:var(--muted)">${r.n} 筆紀錄・最近 ${r.lastDate.replaceAll("-","/")}</div>
+      </div>
+      <div class="text-right">
+        <div class="num text-xl font-black" style="color:var(--gold)">${r.maxW}<span class="text-xs" style="color:var(--muted)"> kg 最重</span></div>
+        <div class="num text-xs" style="color:var(--muted)">估計 1RM ≈ ${r.e1rm.toFixed(1)} kg</div>
+      </div>
+    </div>`).join("");
+}
+
+/* ---------- 動作管理：先選器材；槓鈴／啞鈴展開四大分類，其餘直接列出（皆預設收合） ---------- */
+function renderManageEquipToggle(){
+  const wrap = document.getElementById("manageEquipToggle");
+  wrap.innerHTML = EQUIPS.map(eq=>`
+    <button class="equip-btn ${eq.id===manageEquip?"active":""} flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm" data-mequip="${eq.id}">${equipIcon(eq)}${eq.label}</button>
+  `).join("");
+  wrap.querySelectorAll("[data-mequip]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      manageEquip = btn.dataset.mequip;
+      renderManageEquipToggle();
+      renderExManage();
+    });
+  });
+}
+
+function exRowHtml(e){
+  const n = state.logs.filter(l=>l.exId===e.id).length;
+  return `
+  <div class="rounded-xl p-2.5 flex items-center gap-2" style="background:var(--card);border:1px solid var(--line)">
+    <div class="flex-1 min-w-0">
+      <div class="font-bold text-sm truncate">${escHtml(e.name)}</div>
+      <div class="text-[11px]" style="color:var(--muted)">${n} 筆紀錄</div>
+    </div>
+    <select class="text-xs px-1.5 py-1.5 rounded-lg shrink-0" style="background:var(--accent-soft);color:var(--accent);border:none" data-equipselect="${e.id}">
+      ${EQUIPS.map(eq=>`<option value="${eq.id}" ${eq.id===e.equip?"selected":""}>${eq.label}</option>`).join("")}
+    </select>
+    <button class="text-xs px-2.5 py-1.5 rounded-lg" style="background:var(--card2);border:1px solid var(--line)" data-rename="${e.id}">改名</button>
+    <button class="text-xs px-2.5 py-1.5 rounded-lg" style="color:var(--danger);background:var(--danger-soft)" data-delex="${e.id}">刪除</button>
+  </div>`;
+}
+
+function bindExManageRowEvents(box){
+  box.querySelectorAll("[data-equipselect]").forEach(sel=>{
+    sel.addEventListener("change", ()=>{
+      const e = state.exercises.find(x=>x.id===sel.dataset.equipselect);
+      if(!e) return;
+      e.equip = sel.value;
+      afterExerciseChange();
+    });
+  });
+  box.querySelectorAll("[data-rename]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const e = state.exercises.find(x=>x.id===btn.dataset.rename);
+      const name = await showPrompt("動作新名稱", e.name, { title:"動作改名" });
+      if(name===null) return;
+      if(name.trim()){ e.name = name.trim(); afterExerciseChange(); }
+    });
+  });
+  box.querySelectorAll("[data-delex]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = btn.dataset.delex;
+      const n = state.logs.filter(l=>l.exId===id).length;
+      const msg = n ? `此動作有 ${n} 筆紀錄，刪除動作將一併刪除這些紀錄。` : "確定刪除此動作？";
+      const ok = await showConfirm(msg, { title:"刪除動作", confirmText:"刪除", danger:true });
+      if(!ok) return;
+      state.exercises = state.exercises.filter(x=>x.id!==id);
+      state.logs = state.logs.filter(l=>l.exId!==id);
+      afterExerciseChange();
+    });
+  });
+}
+
+function renderExManage(){
+  const box = document.getElementById("exManageList");
+  const eq = equipObj(manageEquip);
+  if(eq.grouped){
+    box.innerHTML = CATS.map(cat=>{
+      const list = state.exercises.filter(e=>e.cat===cat.id && e.equip===manageEquip);
+      const rows = list.length ? list.map(exRowHtml).join("") : `<div class="text-xs text-center py-3" style="color:var(--muted)">此分類尚無${eq.label}動作</div>`;
+      return `
+      <details class="rounded-2xl overflow-hidden" style="background:var(--card2);border:1px solid var(--line)">
+        <summary class="flex items-center justify-between p-3.5 cursor-pointer">
+          <span class="text-sm font-bold flex items-center gap-1.5">${catIcon(cat)}${cat.label}</span>
+          <span class="text-xs flex items-center gap-1" style="color:var(--muted)">${list.length} 個動作 <span class="chev">▾</span></span>
+        </summary>
+        <div class="px-3.5 pb-3.5 space-y-2" style="border-top:1px solid var(--line)">
+          <div class="pt-2 space-y-2">${rows}</div>
+        </div>
+      </details>`;
+    }).join("");
+  } else {
+    const list = state.exercises.filter(e=>e.equip===manageEquip);
+    box.innerHTML = list.length
+      ? `<div class="space-y-2">${list.map(exRowHtml).join("")}</div>`
+      : `<div class="text-xs text-center py-4 rounded-2xl" style="background:var(--card2);border:1px dashed var(--line);color:var(--muted)">此器材尚無動作</div>`;
+  }
+  bindExManageRowEvents(box);
+}
+
+/* ---------- 新增動作下拉選單 ---------- */
+document.getElementById("newExEquip").innerHTML = EQUIPS.map(e=>`<option value="${e.id}">${e.label}</option>`).join("");
+document.getElementById("newExCat").innerHTML = CATS.map(c=>`<option value="${c.id}">${c.label}</option>`).join("");
+
+function updateNewExCatVisibility(){
+  const eq = equipObj(document.getElementById("newExEquip").value);
+  document.getElementById("newExCatWrap").style.display = eq.grouped ? "" : "none";
+}
+document.getElementById("newExEquip").addEventListener("change", updateNewExCatVisibility);
+updateNewExCatVisibility();
+
+/* ---------- 新增紀錄 ---------- */
+document.getElementById("btnAdd").addEventListener("click", async ()=>{
+  if(!selectedExId){ await showAlert("請先選擇（或到管理新增）訓練動作"); return; }
+  const weight = parseFloat(document.getElementById("inWeight").value);
+  const reps = parseInt(document.getElementById("inReps").value,10);
+  const sets = parseInt(document.getElementById("inSets").value,10);
+  const date = document.getElementById("logDate").value || todayStr();
+  if(!(weight>=0) || !(reps>0) || !(sets>0)){ await showAlert("請確認重量、次數、組數為有效數字"); return; }
+  state.logs.push({
+    id: uid(), date, exId: selectedExId,
+    weight, reps, sets,
+    note: document.getElementById("inNote").value.trim()
+  });
+  document.getElementById("inNote").value = "";
+  afterLogChange();
+  const btn = document.getElementById("btnAdd");
+  btn.textContent = "✓ 已記錄";
+  setTimeout(()=>{ btn.textContent = "＋ 記錄這一筆"; }, 900);
+});
+
+/* ---------- 步進按鈕 ---------- */
+document.querySelectorAll("[data-step]").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    const map = { w:"inWeight", r:"inReps", s:"inSets" };
+    const el = document.getElementById(map[btn.dataset.step]);
+    const delta = parseFloat(btn.dataset.delta);
+    let v = parseFloat(el.value) || 0;
+    v = Math.max(0, Math.round((v+delta)*100)/100);
+    el.value = (btn.dataset.step==="w") ? v : Math.round(v);
+    if(btn.dataset.step==="w") renderPlateCalc();
+  });
+});
+document.getElementById("inWeight").addEventListener("input", renderPlateCalc);
+document.getElementById("logDate").addEventListener("change", renderTodayList);
+
+/* ---------- 管理：新增動作 ---------- */
+document.getElementById("btnAddEx").addEventListener("click", async ()=>{
+  const nameEl = document.getElementById("newExName");
+  const catEl = document.getElementById("newExCat");
+  const equipEl = document.getElementById("newExEquip");
+  const name = nameEl.value.trim();
+  if(!name) return;
+  if(state.exercises.some(e=>e.name===name)){ await showAlert("已有同名動作"); return; }
+  const eq = equipObj(equipEl.value);
+  const cat = eq.grouped ? catEl.value : CATS[0].id;
+  state.exercises.push({ id: uid(), name, cat, equip: equipEl.value });
+  nameEl.value = "";
+  afterExerciseChange();
+});
+
+/* ---------- 動作庫批次合併（Excel／JSON 共用；只新增或更新，不刪除） ---------- */
+function normalizeCat(catRaw){
+  const found = CATS.find(c=>c.id===catRaw || c.label===String(catRaw||"").trim());
+  return found ? found.id : null;
+}
+function normalizeEquip(equipRaw){
+  const found = EQUIPS.find(eq=>eq.id===equipRaw || eq.label===String(equipRaw||"").trim());
+  return found ? found.id : null;
+}
+async function mergeExercisesWithPreview(list, sourceLabel){
+  const toAdd = [];
+  const toUpdate = [];
+  const seen = new Set();
+  list.forEach(item=>{
+    const name = String((item && item.name) || "").trim();
+    if(!name || seen.has(name)) return;
+    seen.add(name);
+    const equip = normalizeEquip(item.equip) || EQUIPS[0].id;
+    const eq = equipObj(equip);
+    const cat = eq.grouped ? (normalizeCat(item.cat) || CATS[0].id) : CATS[0].id;
+    const existing = state.exercises.find(e=>e.name===name);
+    if(existing){
+      if(existing.cat !== cat || existing.equip !== equip) toUpdate.push({ existing, cat, equip });
+    } else {
+      toAdd.push({ name, cat, equip });
+    }
+  });
+  if(!toAdd.length && !toUpdate.length){
+    await showAlert(`${sourceLabel}中沒有可新增或更新的動作（可能都已存在且設定相同）`);
+    return;
+  }
+  const lines = [];
+  if(toAdd.length) lines.push(`新增 ${toAdd.length} 個動作：${toAdd.map(x=>x.name).join("、")}`);
+  if(toUpdate.length) lines.push(`更新 ${toUpdate.length} 個動作的分類／器材：${toUpdate.map(x=>x.existing.name).join("、")}`);
+  const ok = await showConfirm(`${lines.join("\n")}\n\n不會刪除任何現有動作，確定套用？`, { title:`來自${sourceLabel}的匯入預覽`, confirmText:"套用" });
+  if(!ok) return;
+  toAdd.forEach(x=> state.exercises.push({ id: uid(), name:x.name, cat:x.cat, equip:x.equip }));
+  toUpdate.forEach(x=>{ x.existing.cat = x.cat; x.existing.equip = x.equip; });
+  afterExerciseChange();
+  await showAlert(`新增 ${toAdd.length} 個、更新 ${toUpdate.length} 個`, "匯入完成");
+}
+
+/* ---------- 動作庫同步：JSON 下載／上傳 ---------- */
+document.getElementById("btnExportExercises").addEventListener("click", ()=>{
+  const list = state.exercises.map(e=>({ name: e.name, cat: e.cat, equip: e.equip }));
+  const blob = new Blob([JSON.stringify(list,null,2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "iron-log-exercises-"+todayStr()+".json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+document.getElementById("importExerciseJsonFile").addEventListener("change", e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async evt=>{
+    try{
+      const list = JSON.parse(evt.target.result);
+      if(!Array.isArray(list)) throw new Error("格式不符");
+      await mergeExercisesWithPreview(list, "JSON 檔");
+    }catch(err){ await showAlert("匯入失敗：JSON 格式不正確，請確認上傳的是動作庫 JSON（不是完整備份檔）"); }
+    e.target.value = "";
+  };
+  reader.readAsText(file);
+});
+
+/* ---------- 備份 ---------- */
+document.getElementById("btnExport").addEventListener("click", ()=>{
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "iron-log-backup-"+todayStr()+".json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+document.getElementById("importFile").addEventListener("change", e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async evt=>{
+    try{
+      const data = JSON.parse(evt.target.result);
+      if(!data.exercises || !data.logs) throw new Error("格式不符");
+      const ok = await showConfirm(`匯入將取代現有資料（動作 ${data.exercises.length} 個、紀錄 ${data.logs.length} 筆）。`, { title:"匯入完整備份", confirmText:"取代", danger:true });
+      if(!ok) return;
+      state = sanitizeState(data);
+      selectedExId = state.exercises.length ? state.exercises[0].id : null;
+      afterBulkChange();
+      await showAlert("匯入完成 ✓");
+    }catch(err){ await showAlert("匯入失敗：檔案格式不正確"); }
+    e.target.value = "";
+  };
+  reader.readAsText(file);
+});
+document.getElementById("btnWipe").addEventListener("click", async ()=>{
+  const ok = await showConfirm("此動作無法復原（建議先匯出備份）。", { title:"確定清除全部資料？", confirmText:"清除", danger:true });
+  if(!ok) return;
+  state = getDefaultState();
+  selectedExId = state.exercises[0].id;
+  afterBulkChange();
+});
+
+/* ---------- 雲端同步（Google Apps Script） ---------- */
+const GAS_URL_KEY = "ironLog_gasUrl";
+const GAS_SECRET_KEY = "ironLog_gasSecret";
+const GAS_LASTSYNC_KEY = "ironLog_lastSync";
+
+const gasUrlInput = document.getElementById("gasUrlInput");
+const gasSecretInput = document.getElementById("gasSecretInput");
+const syncStatusText = document.getElementById("syncStatusText");
+const syncPill = document.getElementById("syncPill");
+
+function getGasConfig(){
+  return {
+    url: (localStorage.getItem(GAS_URL_KEY) || "").trim(),
+    secret: (localStorage.getItem(GAS_SECRET_KEY) || "").trim()
+  };
+}
+function hasGasConfig(){
+  const c = getGasConfig();
+  return !!(c.url && c.secret);
+}
+
+/* 狀態藥丸：synced(綠) / syncing(黃) / offline(紅) / pulled(藍，短暫顯示) */
+let pillResetTimer = null;
+function setSyncStatus(mode){
+  if(!syncPill) return;
+  const MAP = {
+    synced:  { text:"☁️ 已同步",      bg:"var(--accent-soft)", color:"var(--accent)" },
+    syncing: { text:"⏳ 同步中...",    bg:"var(--gold-soft)",   color:"var(--gold)" },
+    offline: { text:"⚠️ 離線 / 未同步", bg:"var(--danger-soft)", color:"var(--danger)" },
+    pulled:  { text:"📥 發現新資料...", bg:"#E5EEF7",             color:"#4A6FA0" }
+  };
+  const m = MAP[mode] || MAP.offline;
+  syncPill.textContent = m.text;
+  syncPill.style.background = m.bg;
+  syncPill.style.color = m.color;
+  clearTimeout(pillResetTimer);
+  if(mode==="pulled"){
+    pillResetTimer = setTimeout(()=> setSyncStatus("synced"), 1600);
+  }
+}
+
+function fmtSyncTime(ts){
+  if(!ts) return "";
+  const d = new Date(ts);
+  const p = n => String(n).padStart(2,"0");
+  return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function updateSyncStatusText(){
+  if(!syncStatusText) return;
+  if(!hasGasConfig()){
+    syncStatusText.textContent = "尚未設定連線";
+    setSyncStatus("offline");
+    return;
+  }
+  const last = parseInt(localStorage.getItem(GAS_LASTSYNC_KEY) || "0", 10);
+  syncStatusText.textContent = last ? `最後同步：${fmtSyncTime(last)}` : "已設定連線，尚未同步過";
+}
+function markSyncedNow(){
+  localStorage.setItem(GAS_LASTSYNC_KEY, String(Date.now()));
+  updateSyncStatusText();
+}
+
+/* 推送：非同步、避免觸發 CORS 預檢，POST body 不設 Content-Type（GAS 端以 e.postData.contents 解析） */
+let pushTimer = null;
+function schedulePush(){
+  if(!hasGasConfig()) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(()=> pushToCloud(), 700);
+}
+async function pushToCloud(){
+  const { url, secret } = getGasConfig();
+  if(!url || !secret) { setSyncStatus("offline"); return; }
+  setSyncStatus("syncing");
+  try{
+    const res = await fetch(url, {
+      method: "POST",
+      body: JSON.stringify({ token: secret, data: state })
+    });
+    const json = await res.json().catch(()=>null);
+    if(json && json.ok){
+      markSyncedNow();
+      setSyncStatus("synced");
+    } else {
+      setSyncStatus("offline");
+    }
+  }catch(err){
+    setSyncStatus("offline");
+  }
+}
+
+/* 下載：比對雲端與本地 updatedAt，雲端較新才覆蓋本地（Last-Write-Wins） */
+async function pullFromCloud(){
+  const { url, secret } = getGasConfig();
+  if(!url || !secret) { setSyncStatus("offline"); return; }
+  setSyncStatus("syncing");
+  try{
+    const res = await fetch(`${url}?token=${encodeURIComponent(secret)}`);
+    const json = await res.json().catch(()=>null);
+    if(!(json && json.ok && json.data)){ setSyncStatus("offline"); return; }
+    const cloudData = json.data;
+    const cloudUpdatedAt = cloudData.updatedAt || 0;
+    const localUpdatedAt = state.updatedAt || 0;
+    if(cloudData.exercises && cloudData.logs && cloudUpdatedAt > localUpdatedAt){
+      state = sanitizeState(cloudData);
+      persistLocal();
+      if(!state.exercises.find(e=>e.id===selectedExId)){
+        selectedExId = state.exercises.length ? state.exercises[0].id : null;
+      }
+      rerenderAll();
+      updateSelectedExDisplay();
+      setSyncStatus("pulled");
+    } else {
+      setSyncStatus("synced");
+    }
+    markSyncedNow();
+  }catch(err){
+    setSyncStatus("offline");
+  }
+}
+
+if(gasUrlInput && gasSecretInput){
+  gasUrlInput.value = getGasConfig().url;
+  gasSecretInput.value = getGasConfig().secret;
+}
+document.getElementById("btnSaveGasConfig").addEventListener("click", async ()=>{
+  localStorage.setItem(GAS_URL_KEY, gasUrlInput.value.trim());
+  localStorage.setItem(GAS_SECRET_KEY, gasSecretInput.value.trim());
+  updateSyncStatusText();
+  await showAlert("連線設定已儲存 ✓");
+  if(hasGasConfig()) pullFromCloud();
+});
+document.getElementById("btnManualSync").addEventListener("click", async ()=>{
+  if(!hasGasConfig()){ await showAlert("請先填寫並儲存 GAS 網址與專案密碼"); return; }
+  const btn = document.getElementById("btnManualSync");
+  const original = btn.textContent;
+  btn.textContent = "同步中...";
+  btn.disabled = true;
+  await pullFromCloud();
+  await pushToCloud();
+  btn.textContent = original;
+  btn.disabled = false;
+});
+
+/* App 開啟／從背景切回時自動檢查雲端是否有新資料 */
+document.addEventListener("visibilitychange", ()=>{
+  if(document.visibilityState === "visible") pullFromCloud();
+});
+
+/* ---------- Tab 切換 ---------- */
+function switchTab(tab){
+  const panel = document.getElementById("tab-"+tab);
+  if(!panel) return;
+  if(tab==="log"){ renderEquipToggle(); renderExPicker(); renderTodayList(); renderPlateCalc(); }
+  if(tab==="history") renderHistory();
+  if(tab==="stats") renderStats();
+  if(tab==="manage"){ renderManageEquipToggle(); renderExManage(); }
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.toggle("active", b.dataset.tab===tab));
+  document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
+  panel.classList.add("active");
+  window.scrollTo({top:0,left:0,behavior:"instant"});
+}
+document.querySelectorAll(".nav-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=> switchTab(btn.dataset.tab));
+});
+document.getElementById("goManageEx").addEventListener("click", ()=> switchTab("manage"));
+
+/* ---------- 初始化 ---------- */
+document.getElementById("logDate").value = todayStr();
+document.getElementById("hdrDate").textContent = fmtDate(todayStr());
+renderEquipToggle();
+renderExPicker();
+renderTodayList();
+renderPlateCalc();
+updateSyncStatusText();
+if(hasGasConfig()) pullFromCloud(); else setSyncStatus("offline");
+</script>
+</body>
+</html>
