@@ -8,7 +8,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>鐵量日誌 IRON LOG</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;900&family=Work+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -57,6 +56,8 @@
   @keyframes fi{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
   @media (prefers-reduced-motion:reduce){ .fadein{ animation:none; } .chev{ transition:none; } }
   ::-webkit-scrollbar{ width:0; height:0; }
+  .sync-pill{ display:inline-flex; align-items:center; gap:3px; font-size:10px; font-weight:600;
+    padding:2px 8px; border-radius:9999px; white-space:nowrap; transition:background .2s,color .2s; }
 </style>
 </head>
 <body class="min-h-screen">
@@ -71,6 +72,7 @@
     <div class="text-right">
       <div class="text-[10px]" style="color:var(--muted)">今日</div>
       <div id="hdrDate" class="num text-sm font-bold"></div>
+      <div id="syncPill" class="sync-pill mt-1" style="background:var(--card2);color:var(--muted)">⚠️ 離線 / 未同步</div>
     </div>
   </header>
 
@@ -182,15 +184,22 @@
       <button id="btnAddEx" class="w-full mt-2.5 py-2.5 rounded-xl font-bold text-sm" style="background:var(--accent);color:#fff">＋ 新增動作</button>
     </div>
 
-    <h2 class="display font-bold text-sm tracking-wider mb-3">批次新增（Excel）</h2>
-    <div class="rounded-2xl p-4 mb-5" style="background:var(--card);border:1px solid var(--line)">
-      <p class="text-xs leading-relaxed mb-3" style="color:var(--muted)">範本內含四張工作表（槓鈴／啞鈴／爆發動作／壺鈴）。槓鈴、啞鈴依分類欄位填寫；爆發動作、壺鈴則是單欄，直接列出動作名稱即可。存檔後上傳，只會新增或更新，不會刪除既有動作。</p>
-      <div class="flex gap-2">
-        <button id="btnDownloadExcel" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--card2);border:1px solid var(--line)">⬇ 下載 Excel 範本</button>
-        <label class="flex-1 py-2.5 rounded-xl text-sm font-bold text-center cursor-pointer" style="background:var(--card2);border:1px solid var(--line)">
-          ⬆ 上傳 Excel<input id="importExcelFile" type="file" accept=".xlsx,.xls" class="hidden">
-        </label>
+    <h2 class="display font-bold text-sm tracking-wider mb-3">☁️ 雲端同步設定（PC/手機雙向同步）</h2>
+    <div class="rounded-2xl p-4 mb-5 space-y-3" style="background:var(--card);border:1px solid var(--line)">
+      <p class="text-xs leading-relaxed" style="color:var(--muted)">設定一次後，電腦與手機開啟本頁面會自動雙向同步最新的訓練紀錄與動作庫（以最後更新時間較新者為準）。</p>
+      <div>
+        <label class="text-xs font-medium" style="color:var(--muted)">GAS 網址 (URL)</label>
+        <input id="gasUrlInput" type="text" inputmode="url" class="w-full mt-1 px-3 py-2.5 text-sm" placeholder="https://script.google.com/macros/s/.../exec">
       </div>
+      <div>
+        <label class="text-xs font-medium" style="color:var(--muted)">專案密碼 (Secret)</label>
+        <input id="gasSecretInput" type="password" class="w-full mt-1 px-3 py-2.5 text-sm" placeholder="與 GAS 端 SECRET_TOKEN 相同">
+      </div>
+      <div class="flex gap-2">
+        <button id="btnSaveGasConfig" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--card2);border:1px solid var(--line)">💾 儲存連線設定</button>
+        <button id="btnManualSync" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--accent);color:#fff">🔄 立即手動同步</button>
+      </div>
+      <div id="syncStatusText" class="text-xs text-center pt-1" style="color:var(--muted)">尚未設定連線</div>
     </div>
 
     <h2 class="display font-bold text-sm tracking-wider mb-3">動作庫同步（JSON）</h2>
@@ -400,8 +409,20 @@ function getDefaultState(){
       mk("波比跳","upper_push","explosive"),
       mk("壺鈴甩擺","lower_pull","kettlebell")
     ],
-    logs: [] // {id, date:"YYYY-MM-DD", exId, weight, reps, sets, note}
+    logs: [], // {id, date:"YYYY-MM-DD", exId, weight, reps, sets, note}
+    updatedAt: Date.now()
   };
+}
+
+function sanitizeState(s){
+  const validCats = CATS.map(c=>c.id);
+  const validEquips = EQUIPS.map(e=>e.id);
+  s.exercises.forEach(e=>{
+    if(!validCats.includes(e.cat)) e.cat = CATS[0].id;
+    if(!validEquips.includes(e.equip)) e.equip = EQUIPS[0].id;
+  });
+  if(typeof s.updatedAt !== "number") s.updatedAt = 0;
+  return s;
 }
 
 function loadData(){
@@ -417,15 +438,16 @@ function loadData(){
     }
   }
   if(!s || !s.exercises || !s.logs) s = getDefaultState();
-  const validCats = CATS.map(c=>c.id);
-  const validEquips = EQUIPS.map(e=>e.id);
-  s.exercises.forEach(e=>{
-    if(!validCats.includes(e.cat)) e.cat = CATS[0].id;
-    if(!validEquips.includes(e.equip)) e.equip = EQUIPS[0].id;
-  });
-  return s;
+  return sanitizeState(s);
 }
-function saveData(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+/* 純本地寫入，不更新時間戳、不觸發雲端推送（同步下載覆蓋本地時使用） */
+function persistLocal(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+/* 一般資料異動：更新時間戳、寫入本地、並在背景非同步推送到雲端 */
+function saveData(){
+  state.updatedAt = Date.now();
+  persistLocal();
+  schedulePush();
+}
 
 let state = loadData();
 let selectedExId = state.exercises.length ? state.exercises[0].id : null;
@@ -447,11 +469,18 @@ function afterExerciseChange(){
 }
 function afterBulkChange(){
   saveData();
+  rerenderAll();
+}
+/* 重繪所有畫面（本地異動與雲端下載覆蓋皆會呼叫） */
+function rerenderAll(){
+  renderEquipToggle();
   renderExPicker();
   renderTodayList();
   renderHistory();
   renderStats();
+  renderManageEquipToggle();
   renderExManage();
+  renderPlateCalc();
 }
 
 /* ---------- 槓片計算 ---------- */
@@ -894,79 +923,6 @@ async function mergeExercisesWithPreview(list, sourceLabel){
   await showAlert(`新增 ${toAdd.length} 個、更新 ${toUpdate.length} 個`, "匯入完成");
 }
 
-/* ---------- 批次新增：Excel 範本下載／上傳（四張工作表） ---------- */
-document.getElementById("btnDownloadExcel").addEventListener("click", ()=>{
-  const wb = XLSX.utils.book_new();
-  EQUIPS.forEach(eq=>{
-    if(eq.grouped){
-      const cols = CATS.map(cat => state.exercises.filter(e=>e.equip===eq.id && e.cat===cat.id).map(e=>e.name));
-      const maxLen = Math.max(...cols.map(c=>c.length), 1);
-      const headers = CATS.map(c=>c.label);
-      const rows = [headers];
-      for(let i=0;i<maxLen;i++){
-        rows.push(CATS.map((c,idx)=> cols[idx][i] || ""));
-      }
-      const ws = XLSX.utils.aoa_to_sheet(rows);
-      ws['!cols'] = CATS.map(()=>({ wch:16 }));
-      XLSX.utils.book_append_sheet(wb, ws, eq.label);
-    } else {
-      const names = state.exercises.filter(e=>e.equip===eq.id).map(e=>e.name);
-      const rows = [["動作名稱"], ...names.map(n=>[n])];
-      const ws = XLSX.utils.aoa_to_sheet(rows);
-      ws['!cols'] = [{ wch:24 }];
-      XLSX.utils.book_append_sheet(wb, ws, eq.label);
-    }
-  });
-  const noteWs = XLSX.utils.aoa_to_sheet([
-    ["使用說明"],
-    ["1.「槓鈴」「啞鈴」工作表依分類欄位（上肢推／上肢拉／下肢推／下肢拉）填入動作名稱"],
-    ["2.「爆發動作」「壺鈴」工作表只有一欄，直接列出動作名稱即可，不需分類"],
-    ["3. 同一個動作名稱重複上傳只會更新設定，不會產生重複，也不會刪除其他動作"],
-    ["4. 存檔後，回到「鐵量日誌」App → 管理 → 批次新增（Excel）→ 上傳 Excel"]
-  ]);
-  XLSX.utils.book_append_sheet(wb, noteWs, "使用說明");
-  XLSX.writeFile(wb, "iron-log-exercises-"+todayStr()+".xlsx");
-});
-
-document.getElementById("importExcelFile").addEventListener("change", e=>{
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = async evt=>{
-    try{
-      const wb = XLSX.read(evt.target.result, {type:"array"});
-      const list = [];
-      wb.SheetNames.forEach(sheetName=>{
-        const eq = EQUIPS.find(x=>x.label===String(sheetName||"").trim());
-        if(!eq) return;
-        const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:""});
-        if(!rows.length) return;
-        if(eq.grouped){
-          const headers = rows[0].map(h=>String(h||"").trim());
-          const colCat = headers.map(h=> normalizeCat(h));
-          for(let r=1;r<rows.length;r++){
-            const row = rows[r];
-            colCat.forEach((cat, idx)=>{
-              if(!cat) return;
-              const val = String(row[idx]||"").trim();
-              if(val) list.push({ name: val, cat, equip: eq.id });
-            });
-          }
-        } else {
-          for(let r=1;r<rows.length;r++){
-            const val = String((rows[r] && rows[r][0]) || "").trim();
-            if(val) list.push({ name: val, cat: CATS[0].id, equip: eq.id });
-          }
-        }
-      });
-      if(!list.length) throw new Error("找不到可用資料");
-      await mergeExercisesWithPreview(list, "Excel");
-    }catch(err){ await showAlert("匯入失敗，請確認上傳的是本工具下載的 Excel 範本格式"); }
-    e.target.value = "";
-  };
-  reader.readAsArrayBuffer(file);
-});
-
 /* ---------- 動作庫同步：JSON 下載／上傳 ---------- */
 document.getElementById("btnExportExercises").addEventListener("click", ()=>{
   const list = state.exercises.map(e=>({ name: e.name, cat: e.cat, equip: e.equip }));
@@ -1011,13 +967,7 @@ document.getElementById("importFile").addEventListener("change", e=>{
       if(!data.exercises || !data.logs) throw new Error("格式不符");
       const ok = await showConfirm(`匯入將取代現有資料（動作 ${data.exercises.length} 個、紀錄 ${data.logs.length} 筆）。`, { title:"匯入完整備份", confirmText:"取代", danger:true });
       if(!ok) return;
-      const validCats = CATS.map(c=>c.id);
-      const validEquips = EQUIPS.map(e=>e.id);
-      data.exercises.forEach(e=>{
-        if(!validCats.includes(e.cat)) e.cat = CATS[0].id;
-        if(!validEquips.includes(e.equip)) e.equip = EQUIPS[0].id;
-      });
-      state = data;
+      state = sanitizeState(data);
       selectedExId = state.exercises.length ? state.exercises[0].id : null;
       afterBulkChange();
       await showAlert("匯入完成 ✓");
@@ -1032,6 +982,154 @@ document.getElementById("btnWipe").addEventListener("click", async ()=>{
   state = getDefaultState();
   selectedExId = state.exercises[0].id;
   afterBulkChange();
+});
+
+/* ---------- 雲端同步（Google Apps Script） ---------- */
+const GAS_URL_KEY = "ironLog_gasUrl";
+const GAS_SECRET_KEY = "ironLog_gasSecret";
+const GAS_LASTSYNC_KEY = "ironLog_lastSync";
+
+const gasUrlInput = document.getElementById("gasUrlInput");
+const gasSecretInput = document.getElementById("gasSecretInput");
+const syncStatusText = document.getElementById("syncStatusText");
+const syncPill = document.getElementById("syncPill");
+
+function getGasConfig(){
+  return {
+    url: (localStorage.getItem(GAS_URL_KEY) || "").trim(),
+    secret: (localStorage.getItem(GAS_SECRET_KEY) || "").trim()
+  };
+}
+function hasGasConfig(){
+  const c = getGasConfig();
+  return !!(c.url && c.secret);
+}
+
+/* 狀態藥丸：synced(綠) / syncing(黃) / offline(紅) / pulled(藍，短暫顯示) */
+let pillResetTimer = null;
+function setSyncStatus(mode){
+  if(!syncPill) return;
+  const MAP = {
+    synced:  { text:"☁️ 已同步",      bg:"var(--accent-soft)", color:"var(--accent)" },
+    syncing: { text:"⏳ 同步中...",    bg:"var(--gold-soft)",   color:"var(--gold)" },
+    offline: { text:"⚠️ 離線 / 未同步", bg:"var(--danger-soft)", color:"var(--danger)" },
+    pulled:  { text:"📥 發現新資料...", bg:"#E5EEF7",             color:"#4A6FA0" }
+  };
+  const m = MAP[mode] || MAP.offline;
+  syncPill.textContent = m.text;
+  syncPill.style.background = m.bg;
+  syncPill.style.color = m.color;
+  clearTimeout(pillResetTimer);
+  if(mode==="pulled"){
+    pillResetTimer = setTimeout(()=> setSyncStatus("synced"), 1600);
+  }
+}
+
+function fmtSyncTime(ts){
+  if(!ts) return "";
+  const d = new Date(ts);
+  const p = n => String(n).padStart(2,"0");
+  return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function updateSyncStatusText(){
+  if(!syncStatusText) return;
+  if(!hasGasConfig()){
+    syncStatusText.textContent = "尚未設定連線";
+    setSyncStatus("offline");
+    return;
+  }
+  const last = parseInt(localStorage.getItem(GAS_LASTSYNC_KEY) || "0", 10);
+  syncStatusText.textContent = last ? `最後同步：${fmtSyncTime(last)}` : "已設定連線，尚未同步過";
+}
+function markSyncedNow(){
+  localStorage.setItem(GAS_LASTSYNC_KEY, String(Date.now()));
+  updateSyncStatusText();
+}
+
+/* 推送：非同步、避免觸發 CORS 預檢，POST body 不設 Content-Type（GAS 端以 e.postData.contents 解析） */
+let pushTimer = null;
+function schedulePush(){
+  if(!hasGasConfig()) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(()=> pushToCloud(), 700);
+}
+async function pushToCloud(){
+  const { url, secret } = getGasConfig();
+  if(!url || !secret) { setSyncStatus("offline"); return; }
+  setSyncStatus("syncing");
+  try{
+    const res = await fetch(url, {
+      method: "POST",
+      body: JSON.stringify({ token: secret, data: state })
+    });
+    const json = await res.json().catch(()=>null);
+    if(json && json.ok){
+      markSyncedNow();
+      setSyncStatus("synced");
+    } else {
+      setSyncStatus("offline");
+    }
+  }catch(err){
+    setSyncStatus("offline");
+  }
+}
+
+/* 下載：比對雲端與本地 updatedAt，雲端較新才覆蓋本地（Last-Write-Wins） */
+async function pullFromCloud(){
+  const { url, secret } = getGasConfig();
+  if(!url || !secret) { setSyncStatus("offline"); return; }
+  setSyncStatus("syncing");
+  try{
+    const res = await fetch(`${url}?token=${encodeURIComponent(secret)}`);
+    const json = await res.json().catch(()=>null);
+    if(!(json && json.ok && json.data)){ setSyncStatus("offline"); return; }
+    const cloudData = json.data;
+    const cloudUpdatedAt = cloudData.updatedAt || 0;
+    const localUpdatedAt = state.updatedAt || 0;
+    if(cloudData.exercises && cloudData.logs && cloudUpdatedAt > localUpdatedAt){
+      state = sanitizeState(cloudData);
+      persistLocal();
+      if(!state.exercises.find(e=>e.id===selectedExId)){
+        selectedExId = state.exercises.length ? state.exercises[0].id : null;
+      }
+      rerenderAll();
+      updateSelectedExDisplay();
+      setSyncStatus("pulled");
+    } else {
+      setSyncStatus("synced");
+    }
+    markSyncedNow();
+  }catch(err){
+    setSyncStatus("offline");
+  }
+}
+
+if(gasUrlInput && gasSecretInput){
+  gasUrlInput.value = getGasConfig().url;
+  gasSecretInput.value = getGasConfig().secret;
+}
+document.getElementById("btnSaveGasConfig").addEventListener("click", async ()=>{
+  localStorage.setItem(GAS_URL_KEY, gasUrlInput.value.trim());
+  localStorage.setItem(GAS_SECRET_KEY, gasSecretInput.value.trim());
+  updateSyncStatusText();
+  await showAlert("連線設定已儲存 ✓");
+  if(hasGasConfig()) pullFromCloud();
+});
+document.getElementById("btnManualSync").addEventListener("click", async ()=>{
+  if(!hasGasConfig()){ await showAlert("請先填寫並儲存 GAS 網址與專案密碼"); return; }
+  const btn = document.getElementById("btnManualSync");
+  const original = btn.textContent;
+  btn.textContent = "同步中...";
+  btn.disabled = true;
+  await pullFromCloud();
+  await pushToCloud();
+  btn.textContent = original;
+  btn.disabled = false;
+});
+
+/* App 開啟／從背景切回時自動檢查雲端是否有新資料 */
+document.addEventListener("visibilitychange", ()=>{
+  if(document.visibilityState === "visible") pullFromCloud();
 });
 
 /* ---------- Tab 切換 ---------- */
@@ -1059,6 +1157,8 @@ renderEquipToggle();
 renderExPicker();
 renderTodayList();
 renderPlateCalc();
+updateSyncStatusText();
+if(hasGasConfig()) pullFromCloud(); else setSyncStatus("offline");
 </script>
 </body>
 </html>
