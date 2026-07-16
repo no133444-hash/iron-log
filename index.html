@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>鐵量日誌 IRON LOG</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;900&family=Work+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -64,7 +65,7 @@
 <div class="max-w-md mx-auto px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-28">
 
   <!-- Header -->
-  <header class="flex items-end justify-between mb-4">
+  <header class="flex items-end justify-between mb-3">
     <div>
       <div class="display text-[10px] tracking-[0.35em] font-bold" style="color:var(--accent)">IRON LOG</div>
       <h1 class="display text-2xl font-black tracking-wide">鐵量日誌</h1>
@@ -75,6 +76,13 @@
       <div id="syncPill" class="sync-pill mt-1" style="background:var(--card2);color:var(--muted)">⚠️ 離線 / 未同步</div>
     </div>
   </header>
+
+  <div class="flex gap-2 mb-4">
+    <button id="btnExport" class="flex-1 py-2 rounded-xl text-xs font-bold" style="background:var(--card2);border:1px solid var(--line)">⬇ 匯出備份</button>
+    <label class="flex-1 py-2 rounded-xl text-xs font-bold text-center cursor-pointer" style="background:var(--card2);border:1px solid var(--line)">
+      ⬆ 匯入備份<input id="importFile" type="file" accept=".json" class="hidden">
+    </label>
+  </div>
 
   <!-- ============ Tab: 記錄 ============ -->
   <div id="tab-log" class="tab-panel active">
@@ -169,6 +177,10 @@
 
   <!-- ============ Tab: 管理 ============ -->
   <div id="tab-manage" class="tab-panel">
+    <h2 class="display font-bold text-sm tracking-wider mb-3">動作分類管理</h2>
+    <div id="manageEquipToggle" class="grid grid-cols-2 gap-2 mb-3"></div>
+    <div id="exManageList" class="space-y-2 mb-8"></div>
+
     <h2 class="display font-bold text-sm tracking-wider mb-3">新增動作</h2>
     <div class="rounded-2xl p-4 mb-5" style="background:var(--card);border:1px solid var(--line)">
       <label class="text-xs font-medium" style="color:var(--muted)">器材</label>
@@ -182,50 +194,22 @@
       <label class="text-xs font-medium mt-3 block" style="color:var(--muted)">動作名稱</label>
       <input id="newExName" type="text" class="w-full mt-1 px-3 py-2.5 text-sm" placeholder="例如：波比跳">
       <button id="btnAddEx" class="w-full mt-2.5 py-2.5 rounded-xl font-bold text-sm" style="background:var(--accent);color:#fff">＋ 新增動作</button>
-    </div>
 
-    <h2 class="display font-bold text-sm tracking-wider mb-3">☁️ 雲端同步設定（PC/手機雙向同步）</h2>
-    <div class="rounded-2xl p-4 mb-5 space-y-3" style="background:var(--card);border:1px solid var(--line)">
-      <p class="text-xs leading-relaxed" style="color:var(--muted)">設定一次後，電腦與手機開啟本頁面會自動雙向同步最新的訓練紀錄與動作庫（以最後更新時間較新者為準）。</p>
-      <div>
-        <label class="text-xs font-medium" style="color:var(--muted)">GAS 網址 (URL)</label>
-        <input id="gasUrlInput" type="text" inputmode="url" class="w-full mt-1 px-3 py-2.5 text-sm" placeholder="https://script.google.com/macros/s/.../exec">
-      </div>
-      <div>
-        <label class="text-xs font-medium" style="color:var(--muted)">專案密碼 (Secret)</label>
-        <input id="gasSecretInput" type="password" class="w-full mt-1 px-3 py-2.5 text-sm" placeholder="與 GAS 端 SECRET_TOKEN 相同">
-      </div>
-      <div class="flex gap-2">
-        <button id="btnSaveGasConfig" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--card2);border:1px solid var(--line)">💾 儲存連線設定</button>
-        <button id="btnManualSync" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--accent);color:#fff">🔄 立即手動同步</button>
-      </div>
-      <div id="syncStatusText" class="text-xs text-center pt-1" style="color:var(--muted)">尚未設定連線</div>
-    </div>
-
-    <h2 class="display font-bold text-sm tracking-wider mb-3">動作庫同步（JSON）</h2>
-    <div class="rounded-2xl p-4 mb-5" style="background:var(--card);border:1px solid var(--line)">
-      <p class="text-xs leading-relaxed mb-3" style="color:var(--muted)">在電腦用「動作庫管理（桌面版）」整理好動作後下載 JSON，這裡上傳即可同步到手機；也可以先把手機的動作庫下載成 JSON，帶到電腦繼續編輯。同樣只新增或更新，不會刪除。</p>
-      <div class="flex gap-2">
-        <button id="btnExportExercises" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--card2);border:1px solid var(--line)">⬇ 下載動作庫 JSON</button>
-        <label class="flex-1 py-2.5 rounded-xl text-sm font-bold text-center cursor-pointer" style="background:var(--card2);border:1px solid var(--line)">
-          ⬆ 上傳動作庫 JSON<input id="importExerciseJsonFile" type="file" accept=".json" class="hidden">
-        </label>
+      <div class="mt-4 pt-4" style="border-top:1px dashed var(--line)">
+        <label class="text-xs font-medium" style="color:var(--muted)">批次匯入／匯出（Excel）</label>
+        <p class="text-xs leading-relaxed mt-1 mb-2.5" style="color:var(--muted)">下載目前的動作庫成 Excel，編輯後再上傳；上傳時可選擇「覆蓋」或「只新增現有以外的動作」。</p>
+        <div class="flex gap-2">
+          <button id="btnExportExercisesExcel" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--card2);border:1px solid var(--line)">⬇ 下載 Excel</button>
+          <label class="flex-1 py-2.5 rounded-xl text-sm font-bold text-center cursor-pointer" style="background:var(--card2);border:1px solid var(--line)">
+            ⬆ 上傳 Excel<input id="importExerciseExcelFile" type="file" accept=".xlsx,.xls" class="hidden">
+          </label>
+        </div>
       </div>
     </div>
 
-    <h2 class="display font-bold text-sm tracking-wider mb-3">動作分類管理</h2>
-    <div id="manageEquipToggle" class="grid grid-cols-2 gap-2 mb-3"></div>
-    <div id="exManageList" class="space-y-2 mb-8"></div>
-
-    <h2 class="display font-bold text-sm tracking-wider mb-3">完整資料備份（含訓練紀錄）</h2>
-    <div class="rounded-2xl p-4 space-y-3" style="background:var(--card);border:1px solid var(--line)">
-      <p class="text-xs leading-relaxed" style="color:var(--muted)">資料儲存在此瀏覽器的 LocalStorage。換手機或清除瀏覽資料前，請先匯出備份（含所有訓練紀錄，會整份取代，非新增）。</p>
-      <div class="flex gap-2">
-        <button id="btnExport" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--card2);border:1px solid var(--line)">⬇ 匯出 JSON</button>
-        <label class="flex-1 py-2.5 rounded-xl text-sm font-bold text-center cursor-pointer" style="background:var(--card2);border:1px solid var(--line)">
-          ⬆ 匯入 JSON<input id="importFile" type="file" accept=".json" class="hidden">
-        </label>
-      </div>
+    <h2 class="display font-bold text-sm tracking-wider mb-3">清除資料</h2>
+    <div class="rounded-2xl p-4" style="background:var(--card);border:1px solid var(--line)">
+      <p class="text-xs leading-relaxed mb-3" style="color:var(--muted)">資料儲存在此瀏覽器與雲端。清除前建議先於最上方按「⬇ 匯出備份」保存一份。</p>
       <button id="btnWipe" class="w-full py-2.5 rounded-xl text-sm font-bold" style="background:var(--danger-soft);border:1px solid var(--danger);color:var(--danger)">清除全部資料</button>
     </div>
   </div>
@@ -259,10 +243,51 @@
     <h3 id="modalTitle" class="font-bold text-base mb-1.5"></h3>
     <p id="modalMessage" class="text-sm mb-3 whitespace-pre-line" style="color:var(--muted)"></p>
     <input id="modalInput" type="text" class="w-full px-3 py-2.5 text-sm mb-3 hidden">
-    <div class="flex gap-2">
+    <div id="modalBtnRow" class="flex gap-2">
       <button id="modalCancelBtn" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--card2);border:1px solid var(--line)">取消</button>
+      <button id="modalThirdBtn" class="flex-1 py-2.5 rounded-xl text-sm font-bold hidden" style="background:var(--accent);color:#fff">選項</button>
       <button id="modalConfirmBtn" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--accent);color:#fff">確定</button>
     </div>
+  </div>
+</div>
+
+<!-- 編輯訓練紀錄用的對話框 -->
+<div id="editLogOverlay" class="fixed inset-0 z-50 hidden items-center justify-center p-5" style="background:rgba(38,43,40,.4)">
+  <div class="w-full max-w-sm rounded-2xl p-5 space-y-3" style="background:var(--card)">
+    <h3 class="font-bold text-base">編輯訓練紀錄</h3>
+
+    <div>
+      <label class="text-xs font-medium" style="color:var(--muted)">日期</label>
+      <input id="editLogDate" type="date" class="w-full mt-1 px-3 py-2.5 text-sm num">
+    </div>
+    <div>
+      <label class="text-xs font-medium" style="color:var(--muted)">動作</label>
+      <select id="editLogEx" class="w-full mt-1 px-3 py-2.5 text-sm"></select>
+    </div>
+    <div class="grid grid-cols-3 gap-2">
+      <div>
+        <label class="text-xs font-medium" style="color:var(--muted)">重量(kg)</label>
+        <input id="editLogWeight" type="text" inputmode="decimal" class="w-full mt-1 px-2 py-2.5 text-sm text-center num">
+      </div>
+      <div>
+        <label class="text-xs font-medium" style="color:var(--muted)">次數</label>
+        <input id="editLogReps" type="text" inputmode="numeric" class="w-full mt-1 px-2 py-2.5 text-sm text-center num">
+      </div>
+      <div>
+        <label class="text-xs font-medium" style="color:var(--muted)">組數</label>
+        <input id="editLogSets" type="text" inputmode="numeric" class="w-full mt-1 px-2 py-2.5 text-sm text-center num">
+      </div>
+    </div>
+    <div>
+      <label class="text-xs font-medium" style="color:var(--muted)">備註</label>
+      <input id="editLogNote" type="text" class="w-full mt-1 px-3 py-2.5 text-sm">
+    </div>
+
+    <div class="flex gap-2 pt-1">
+      <button id="editLogCancelBtn" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--card2);border:1px solid var(--line)">取消</button>
+      <button id="editLogSaveBtn" class="flex-1 py-2.5 rounded-xl text-sm font-bold" style="background:var(--accent);color:#fff">儲存</button>
+    </div>
+    <button id="editLogDeleteBtn" class="w-full py-2 rounded-xl text-xs font-bold" style="background:var(--danger-soft);color:var(--danger)">刪除這筆紀錄</button>
   </div>
 </div>
 
@@ -338,7 +363,9 @@ const modalOverlay = document.getElementById("modalOverlay");
 const modalTitle = document.getElementById("modalTitle");
 const modalMessage = document.getElementById("modalMessage");
 const modalInput = document.getElementById("modalInput");
+const modalBtnRow = document.getElementById("modalBtnRow");
 const modalCancelBtn = document.getElementById("modalCancelBtn");
+const modalThirdBtn = document.getElementById("modalThirdBtn");
 const modalConfirmBtn = document.getElementById("modalConfirmBtn");
 let modalResolve = null;
 
@@ -349,13 +376,14 @@ function closeModal(result){
 }
 modalOverlay.addEventListener("click", e=>{ if(e.target===modalOverlay) closeModal(null); });
 modalCancelBtn.addEventListener("click", ()=> closeModal(null));
+modalThirdBtn.addEventListener("click", ()=> closeModal("third"));
 modalConfirmBtn.addEventListener("click", ()=>{
   const usesInput = !modalInput.classList.contains("hidden");
   closeModal(usesInput ? modalInput.value : true);
 });
 modalInput.addEventListener("keydown", e=>{ if(e.key==="Enter") modalConfirmBtn.click(); });
 
-function showModal({ title, message="", input=false, defaultValue="", confirmText="確定", cancelText="取消", danger=false, onlyOk=false }){
+function showModal({ title, message="", input=false, defaultValue="", confirmText="確定", cancelText="取消", danger=false, onlyOk=false, thirdText=null }){
   return new Promise(resolve=>{
     modalResolve = resolve;
     modalTitle.textContent = title;
@@ -371,6 +399,16 @@ function showModal({ title, message="", input=false, defaultValue="", confirmTex
     modalConfirmBtn.style.background = danger ? "var(--danger)" : "var(--accent)";
     modalCancelBtn.style.display = onlyOk ? "none" : "";
     modalCancelBtn.textContent = cancelText;
+    if(thirdText){
+      modalThirdBtn.textContent = thirdText;
+      modalThirdBtn.classList.remove("hidden");
+      modalBtnRow.classList.remove("flex-row");
+      modalBtnRow.classList.add("flex-col");
+    } else {
+      modalThirdBtn.classList.add("hidden");
+      modalBtnRow.classList.remove("flex-col");
+      modalBtnRow.classList.add("flex-row");
+    }
     modalOverlay.classList.remove("hidden");
     modalOverlay.classList.add("flex");
     if(input) setTimeout(()=>{ modalInput.focus(); modalInput.select(); }, 50);
@@ -669,13 +707,81 @@ function renderHistory(){
       <div class="px-3.5 pb-3.5 space-y-1.5" style="border-top:1px solid var(--line)">
         ${logs.map(l=>`
           <div class="flex items-center justify-between pt-2 text-sm">
-            <span class="font-medium">${escHtml(exName(l.exId))}${l.note?`<span class="text-xs ml-1" style="color:var(--muted)">${escHtml(l.note)}</span>`:""}</span>
-            <span class="num font-bold">${l.weight}kg × ${l.reps} × ${l.sets}</span>
+            <span class="font-medium min-w-0 truncate">${escHtml(exName(l.exId))}${l.note?`<span class="text-xs ml-1" style="color:var(--muted)">${escHtml(l.note)}</span>`:""}</span>
+            <span class="flex items-center gap-2 shrink-0">
+              <span class="num font-bold">${l.weight}kg × ${l.reps} × ${l.sets}</span>
+              <button class="text-xs px-2 py-1 rounded-lg" style="color:var(--accent);background:var(--accent-soft)" data-edit="${l.id}">編輯</button>
+            </span>
           </div>`).join("")}
       </div>
     </details>`;
   }).join("");
+  box.querySelectorAll("[data-edit]").forEach(btn=>{
+    btn.addEventListener("click", ()=> openEditLogModal(btn.dataset.edit));
+  });
 }
+
+/* ---------- 訓練紀錄編輯 ---------- */
+const editLogOverlay = document.getElementById("editLogOverlay");
+const editLogDate = document.getElementById("editLogDate");
+const editLogEx = document.getElementById("editLogEx");
+const editLogWeight = document.getElementById("editLogWeight");
+const editLogReps = document.getElementById("editLogReps");
+const editLogSets = document.getElementById("editLogSets");
+const editLogNote = document.getElementById("editLogNote");
+let editingLogId = null;
+
+function openEditLogModal(logId){
+  const log = state.logs.find(l=>l.id===logId);
+  if(!log) return;
+  editingLogId = logId;
+  let options = state.exercises.map(e=>`<option value="${e.id}">${escHtml(e.name)}</option>`).join("");
+  if(!state.exercises.some(e=>e.id===log.exId)){
+    options = `<option value="${escHtml(log.exId)}">（已刪除動作，原紀錄保留）</option>` + options;
+  }
+  editLogEx.innerHTML = options;
+  editLogDate.value = log.date;
+  editLogEx.value = log.exId;
+  editLogWeight.value = log.weight;
+  editLogReps.value = log.reps;
+  editLogSets.value = log.sets;
+  editLogNote.value = log.note || "";
+  editLogOverlay.classList.remove("hidden");
+  editLogOverlay.classList.add("flex");
+}
+function closeEditLogModal(){
+  editLogOverlay.classList.add("hidden");
+  editLogOverlay.classList.remove("flex");
+  editingLogId = null;
+}
+editLogOverlay.addEventListener("click", e=>{ if(e.target===editLogOverlay) closeEditLogModal(); });
+document.getElementById("editLogCancelBtn").addEventListener("click", closeEditLogModal);
+document.getElementById("editLogSaveBtn").addEventListener("click", async ()=>{
+  const log = state.logs.find(l=>l.id===editingLogId);
+  if(!log) return;
+  if(!editLogDate.value){ await showAlert("請選擇日期"); return; }
+  if(!editLogEx.value){ await showAlert("請選擇動作"); return; }
+  const weight = parseFloat(editLogWeight.value);
+  const reps = parseInt(editLogReps.value, 10);
+  const sets = parseInt(editLogSets.value, 10);
+  if(!(weight>0) || !(reps>0) || !(sets>0)){ await showAlert("重量／次數／組數請輸入大於 0 的數字"); return; }
+  log.date = editLogDate.value;
+  log.exId = editLogEx.value;
+  log.weight = weight;
+  log.reps = reps;
+  log.sets = sets;
+  log.note = editLogNote.value.trim();
+  closeEditLogModal();
+  afterBulkChange();
+});
+document.getElementById("editLogDeleteBtn").addEventListener("click", async ()=>{
+  const logId = editingLogId;
+  closeEditLogModal();
+  const ok = await showConfirm("確定要刪除這筆訓練紀錄嗎？此動作無法復原。", { title:"刪除紀錄", confirmText:"刪除", danger:true });
+  if(!ok) return;
+  state.logs = state.logs.filter(l=>l.id!==logId);
+  afterBulkChange();
+});
 
 /* ---------- 統計 ---------- */
 function epley1RM(w,r){ return r<=1 ? w : w*(1+r/30); }
@@ -881,7 +987,7 @@ document.getElementById("btnAddEx").addEventListener("click", async ()=>{
   afterExerciseChange();
 });
 
-/* ---------- 動作庫批次合併（Excel／JSON 共用；只新增或更新，不刪除） ---------- */
+/* ---------- 動作庫工具：分類／器材名稱正規化（id 或中文標籤皆可辨識） ---------- */
 function normalizeCat(catRaw){
   const found = CATS.find(c=>c.id===catRaw || c.label===String(catRaw||"").trim());
   return found ? found.id : null;
@@ -890,62 +996,111 @@ function normalizeEquip(equipRaw){
   const found = EQUIPS.find(eq=>eq.id===equipRaw || eq.label===String(equipRaw||"").trim());
   return found ? found.id : null;
 }
-async function mergeExercisesWithPreview(list, sourceLabel){
-  const toAdd = [];
-  const toUpdate = [];
+/* 將 Excel 讀出的原始列，正規化並去除空白名稱／重複名稱（保留第一筆） */
+function normalizeExcelRows(rows){
   const seen = new Set();
-  list.forEach(item=>{
-    const name = String((item && item.name) || "").trim();
+  const list = [];
+  rows.forEach(item=>{
+    const name = String((item && (item.動作名稱 ?? item.name)) || "").trim();
     if(!name || seen.has(name)) return;
     seen.add(name);
-    const equip = normalizeEquip(item.equip) || EQUIPS[0].id;
+    const equipRaw = (item && (item.器材 ?? item.equip)) ?? "";
+    const catRaw = (item && (item.分類 ?? item.cat)) ?? "";
+    const equip = normalizeEquip(equipRaw) || EQUIPS[0].id;
     const eq = equipObj(equip);
-    const cat = eq.grouped ? (normalizeCat(item.cat) || CATS[0].id) : CATS[0].id;
-    const existing = state.exercises.find(e=>e.name===name);
-    if(existing){
-      if(existing.cat !== cat || existing.equip !== equip) toUpdate.push({ existing, cat, equip });
-    } else {
-      toAdd.push({ name, cat, equip });
-    }
+    const cat = eq.grouped ? (normalizeCat(catRaw) || CATS[0].id) : CATS[0].id;
+    list.push({ name, cat, equip });
   });
-  if(!toAdd.length && !toUpdate.length){
-    await showAlert(`${sourceLabel}中沒有可新增或更新的動作（可能都已存在且設定相同）`);
-    return;
-  }
-  const lines = [];
-  if(toAdd.length) lines.push(`新增 ${toAdd.length} 個動作：${toAdd.map(x=>x.name).join("、")}`);
-  if(toUpdate.length) lines.push(`更新 ${toUpdate.length} 個動作的分類／器材：${toUpdate.map(x=>x.existing.name).join("、")}`);
-  const ok = await showConfirm(`${lines.join("\n")}\n\n不會刪除任何現有動作，確定套用？`, { title:`來自${sourceLabel}的匯入預覽`, confirmText:"套用" });
-  if(!ok) return;
-  toAdd.forEach(x=> state.exercises.push({ id: uid(), name:x.name, cat:x.cat, equip:x.equip }));
-  toUpdate.forEach(x=>{ x.existing.cat = x.cat; x.existing.equip = x.equip; });
-  afterExerciseChange();
-  await showAlert(`新增 ${toAdd.length} 個、更新 ${toUpdate.length} 個`, "匯入完成");
+  return list;
 }
 
-/* ---------- 動作庫同步：JSON 下載／上傳 ---------- */
-document.getElementById("btnExportExercises").addEventListener("click", ()=>{
-  const list = state.exercises.map(e=>({ name: e.name, cat: e.cat, equip: e.equip }));
-  const blob = new Blob([JSON.stringify(list,null,2)], {type:"application/json"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "iron-log-exercises-"+todayStr()+".json";
-  a.click();
-  URL.revokeObjectURL(a.href);
+/* 模式一：只新增現有以外的動作，完全保留現有動作（不更新分類／器材） */
+async function applyExcelAddOnly(list){
+  const toAdd = list.filter(x=> !state.exercises.some(e=>e.name===x.name));
+  if(!toAdd.length){ await showAlert("Excel 中沒有新的動作可新增（可能都已存在）"); return; }
+  const ok = await showConfirm(
+    `將新增 ${toAdd.length} 個動作：${toAdd.map(x=>x.name).join("、")}\n\n現有動作不會被更動。`,
+    { title:"確認新增", confirmText:"新增" }
+  );
+  if(!ok) return;
+  toAdd.forEach(x=> state.exercises.push({ id: uid(), name:x.name, cat:x.cat, equip:x.equip }));
+  afterExerciseChange();
+  await showAlert(`已新增 ${toAdd.length} 個動作。`);
+}
+
+/* 模式二：覆蓋，動作庫整個換成 Excel 內容。
+   為了不讓「訓練紀錄」失去對應動作名稱，同名動作會沿用原本的 id（只更新分類／器材），
+   只有真的不在 Excel 裡的現有動作才會被移除（其歷史紀錄仍會保留，但動作名稱會顯示為「（已刪除動作）」）。 */
+async function applyExcelOverwrite(list){
+  if(!list.length){ await showAlert("Excel 中沒有可用的動作資料"); return; }
+  const newByName = new Map(list.map(x=>[x.name, x]));
+  const toRemove = state.exercises.filter(e=>!newByName.has(e.name));
+  const toAddCount = list.filter(x=>!state.exercises.some(e=>e.name===x.name)).length;
+  const toKeepCount = list.length - toAddCount;
+
+  let msg = `覆蓋後動作庫將變為 ${list.length} 個動作（沿用現有 ${toKeepCount} 個、新增 ${toAddCount} 個）。`;
+  if(toRemove.length){
+    msg += `\n\n以下 ${toRemove.length} 個現有動作不在 Excel 中，將被移除：${toRemove.map(e=>e.name).join("、")}`;
+    const removedHasLogs = toRemove.filter(e=> state.logs.some(l=>l.exId===e.id));
+    if(removedHasLogs.length){
+      msg += `\n\n⚠️ 「${removedHasLogs.map(e=>e.name).join("、")}」已有歷史訓練紀錄，移除後紀錄仍會保留，但動作名稱會顯示為「（已刪除動作）」。`;
+    }
+  }
+  const ok = await showConfirm(msg, { title:"確認覆蓋動作庫", confirmText:"確定覆蓋", danger:true });
+  if(!ok) return;
+
+  const existingByName = new Map(state.exercises.map(e=>[e.name, e]));
+  state.exercises = list.map(x=>{
+    const existing = existingByName.get(x.name);
+    return existing
+      ? { id: existing.id, name:x.name, cat:x.cat, equip:x.equip }
+      : { id: uid(), name:x.name, cat:x.cat, equip:x.equip };
+  });
+  if(!state.exercises.find(e=>e.id===selectedExId)){
+    selectedExId = state.exercises.length ? state.exercises[0].id : null;
+  }
+  afterBulkChange();
+  await showAlert(`覆蓋完成，共 ${state.exercises.length} 個動作。`);
+}
+
+/* ---------- 動作庫同步：Excel 下載／上傳 ---------- */
+document.getElementById("btnExportExercisesExcel").addEventListener("click", ()=>{
+  const rows = state.exercises.map(e=>({
+    動作名稱: e.name,
+    分類: equipObj(e.equip).grouped ? (CATS.find(c=>c.id===e.cat)?.label || "") : "",
+    器材: equipObj(e.equip).label
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws["!cols"] = [{ wch:20 }, { wch:10 }, { wch:10 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "動作庫");
+  XLSX.writeFile(wb, "iron-log-exercises-"+todayStr()+".xlsx");
 });
-document.getElementById("importExerciseJsonFile").addEventListener("change", e=>{
+document.getElementById("importExerciseExcelFile").addEventListener("change", e=>{
   const file = e.target.files[0];
   if(!file) return;
   const reader = new FileReader();
   reader.onload = async evt=>{
     try{
-      const list = JSON.parse(evt.target.result);
-      if(!Array.isArray(list)) throw new Error("格式不符");
-      await mergeExercisesWithPreview(list, "JSON 檔");
-    }catch(err){ await showAlert("匯入失敗：JSON 格式不正確，請確認上傳的是動作庫 JSON（不是完整備份檔）"); }
+      const wb = XLSX.read(evt.target.result, { type:"array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval:"" });
+      const list = normalizeExcelRows(rows);
+      if(!list.length){ await showAlert("讀不到任何動作資料，請確認欄位為「動作名稱／分類／器材」"); e.target.value=""; return; }
+      const choice = await showModal({
+        title: "上傳動作庫 Excel",
+        message: `讀取到 ${list.length} 筆動作資料，請選擇匯入方式：`,
+        confirmText: "覆蓋（取代全部動作）",
+        thirdText: "只新增現有以外的動作",
+        cancelText: "取消",
+        danger: true
+      });
+      if(choice === true) await applyExcelOverwrite(list);
+      else if(choice === "third") await applyExcelAddOnly(list);
+    }catch(err){ await showAlert("匯入失敗：檔案格式不正確，請確認上傳的是 .xlsx 檔"); }
     e.target.value = "";
   };
-  reader.readAsText(file);
+  reader.readAsArrayBuffer(file);
 });
 
 /* ---------- 備份 ---------- */
@@ -985,25 +1140,15 @@ document.getElementById("btnWipe").addEventListener("click", async ()=>{
 });
 
 /* ---------- 雲端同步（Google Apps Script） ---------- */
-const GAS_URL_KEY = "ironLog_gasUrl";
-const GAS_SECRET_KEY = "ironLog_gasSecret";
+/* 與耗材領用暨庫存管理系統共用同一份試算表／同一支部署網址，
+   以 SYSTEM_KEY 區隔專屬分頁（iron_log_data），不會互相覆蓋。
+   比照耗材領用系統，不需密碼，開啟頁面即自動同步。 */
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyq-XptFRw6ztLs5LXLR4v_STih0oUkf6SPWD8LWrTjtce74MmWSO92KKbcgQbfddP9vg/exec";
+const SYSTEM_KEY = "iron_log_data";
+
 const GAS_LASTSYNC_KEY = "ironLog_lastSync";
 
-const gasUrlInput = document.getElementById("gasUrlInput");
-const gasSecretInput = document.getElementById("gasSecretInput");
-const syncStatusText = document.getElementById("syncStatusText");
 const syncPill = document.getElementById("syncPill");
-
-function getGasConfig(){
-  return {
-    url: (localStorage.getItem(GAS_URL_KEY) || "").trim(),
-    secret: (localStorage.getItem(GAS_SECRET_KEY) || "").trim()
-  };
-}
-function hasGasConfig(){
-  const c = getGasConfig();
-  return !!(c.url && c.secret);
-}
 
 /* 狀態藥丸：synced(綠) / syncing(黃) / offline(紅) / pulled(藍，短暫顯示) */
 let pillResetTimer = null;
@@ -1025,42 +1170,22 @@ function setSyncStatus(mode){
   }
 }
 
-function fmtSyncTime(ts){
-  if(!ts) return "";
-  const d = new Date(ts);
-  const p = n => String(n).padStart(2,"0");
-  return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
-}
-function updateSyncStatusText(){
-  if(!syncStatusText) return;
-  if(!hasGasConfig()){
-    syncStatusText.textContent = "尚未設定連線";
-    setSyncStatus("offline");
-    return;
-  }
-  const last = parseInt(localStorage.getItem(GAS_LASTSYNC_KEY) || "0", 10);
-  syncStatusText.textContent = last ? `最後同步：${fmtSyncTime(last)}` : "已設定連線，尚未同步過";
-}
 function markSyncedNow(){
   localStorage.setItem(GAS_LASTSYNC_KEY, String(Date.now()));
-  updateSyncStatusText();
 }
 
 /* 推送：非同步、避免觸發 CORS 預檢，POST body 不設 Content-Type（GAS 端以 e.postData.contents 解析） */
 let pushTimer = null;
 function schedulePush(){
-  if(!hasGasConfig()) return;
   clearTimeout(pushTimer);
   pushTimer = setTimeout(()=> pushToCloud(), 700);
 }
 async function pushToCloud(){
-  const { url, secret } = getGasConfig();
-  if(!url || !secret) { setSyncStatus("offline"); return; }
   setSyncStatus("syncing");
   try{
-    const res = await fetch(url, {
+    const res = await fetch(GAS_URL, {
       method: "POST",
-      body: JSON.stringify({ token: secret, data: state })
+      body: JSON.stringify({ system: SYSTEM_KEY, data: state })
     });
     const json = await res.json().catch(()=>null);
     if(json && json.ok){
@@ -1076,13 +1201,17 @@ async function pushToCloud(){
 
 /* 下載：比對雲端與本地 updatedAt，雲端較新才覆蓋本地（Last-Write-Wins） */
 async function pullFromCloud(){
-  const { url, secret } = getGasConfig();
-  if(!url || !secret) { setSyncStatus("offline"); return; }
   setSyncStatus("syncing");
   try{
-    const res = await fetch(`${url}?token=${encodeURIComponent(secret)}`);
+    const res = await fetch(`${GAS_URL}?system=${encodeURIComponent(SYSTEM_KEY)}`);
     const json = await res.json().catch(()=>null);
-    if(!(json && json.ok && json.data)){ setSyncStatus("offline"); return; }
+    if(!json || !json.ok){ setSyncStatus("offline"); return; }
+    if(!json.data){
+      // 雲端回應正常，但分頁還是空的（例如剛啟用同步）：直接把本機資料上傳，建立雲端起始版本，
+      // 這不是連線失敗，不應該顯示「離線」。
+      await pushToCloud();
+      return;
+    }
     const cloudData = json.data;
     const cloudUpdatedAt = cloudData.updatedAt || 0;
     const localUpdatedAt = state.updatedAt || 0;
@@ -1103,29 +1232,6 @@ async function pullFromCloud(){
     setSyncStatus("offline");
   }
 }
-
-if(gasUrlInput && gasSecretInput){
-  gasUrlInput.value = getGasConfig().url;
-  gasSecretInput.value = getGasConfig().secret;
-}
-document.getElementById("btnSaveGasConfig").addEventListener("click", async ()=>{
-  localStorage.setItem(GAS_URL_KEY, gasUrlInput.value.trim());
-  localStorage.setItem(GAS_SECRET_KEY, gasSecretInput.value.trim());
-  updateSyncStatusText();
-  await showAlert("連線設定已儲存 ✓");
-  if(hasGasConfig()) pullFromCloud();
-});
-document.getElementById("btnManualSync").addEventListener("click", async ()=>{
-  if(!hasGasConfig()){ await showAlert("請先填寫並儲存 GAS 網址與專案密碼"); return; }
-  const btn = document.getElementById("btnManualSync");
-  const original = btn.textContent;
-  btn.textContent = "同步中...";
-  btn.disabled = true;
-  await pullFromCloud();
-  await pushToCloud();
-  btn.textContent = original;
-  btn.disabled = false;
-});
 
 /* App 開啟／從背景切回時自動檢查雲端是否有新資料 */
 document.addEventListener("visibilitychange", ()=>{
@@ -1157,8 +1263,7 @@ renderEquipToggle();
 renderExPicker();
 renderTodayList();
 renderPlateCalc();
-updateSyncStatusText();
-if(hasGasConfig()) pullFromCloud(); else setSyncStatus("offline");
+pullFromCloud();
 </script>
 </body>
 </html>
